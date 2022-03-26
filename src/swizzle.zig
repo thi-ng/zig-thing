@@ -1,6 +1,6 @@
 // const @Vector = @import("std").meta.@Vector;
 
-// codegen:
+// codegen (NodeJS):
 // import { comp, distinct, map, mapcat, permutations, range, repeat, run, str, trace zip } from "@thi.ng/transducers";
 // D = [2, 3, 4];
 // run(

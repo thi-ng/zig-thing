@@ -6,12 +6,12 @@ pub fn build(b: *std.build.Builder) void {
     const mode = b.standardReleaseOptions();
     const target = b.standardTargetOptions(.{});
 
-    const lib = b.addStaticLibrary("zigthing", "src/main.zig");
+    const lib = b.addStaticLibrary("zigthing", "src/vec-simd.zig");
     lib.setTarget(target);
     lib.setBuildMode(mode);
     lib.install();
 
-    const main_tests = b.addTest("src/main.zig");
+    const main_tests = b.addTest("src/vec-simd.zig");
     main_tests.setBuildMode(mode);
 
     const test_step = b.step("test", "Run library tests");
