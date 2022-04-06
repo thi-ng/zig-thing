@@ -380,7 +380,7 @@ pub fn NDArray(comptime N: usize, comptime T: type) type {
             for (shape) |_, i| {
                 const j = N - 1 - i;
                 stride[j] = s;
-                s *= shape[j];
+                s *= @intCast(isize, shape[j]);
             }
             return stride;
         }
