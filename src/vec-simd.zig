@@ -45,7 +45,7 @@ pub fn Vec(comptime N: u32, comptime C: type) type {
             return a[0];
         }
 
-        pub fn addN(a: V, n: C) V {
+        pub inline fn addN(a: V, n: C) V {
             return a + of(n);
         }
 
@@ -106,6 +106,12 @@ pub fn Vec(comptime N: u32, comptime C: type) type {
             return BVec(N).all(a == b);
         }
 
+        pub fn fill(buf: []V, val: V) void {
+            for (buf) |_, i| {
+                buf[i] = val;
+            }
+        }
+
         pub inline fn fromBVec(a: B) V {
             return select(a, ONE, ZERO);
         }
@@ -114,8 +120,9 @@ pub fn Vec(comptime N: u32, comptime C: type) type {
             return BVec(N).all(a == ZERO);
         }
 
-        pub inline fn maddN(a: V, b: V, n: C) V {
-            return a + b * of(n);
+        /// computes a * b + c, where `a` and `c` are vectors and `b` is a scalar
+        pub inline fn maddN(a: V, n: C, b: V) V {
+            return a * of(n) + b;
         }
 
         pub inline fn magSq(a: V) C {
@@ -189,6 +196,15 @@ fn VecTypeSpecific(comptime N: u32, comptime T: type) type {
                 var res: [N]T = undefined;
                 inline while (i < N) : (i += 1) {
                     res[i] = @floatToInt(T, a[i]);
+                }
+                return res;
+            }
+
+            pub inline fn fromIVec(comptime S: type, a: @Vector(N, S)) V {
+                comptime var i = 0;
+                var res: [N]T = undefined;
+                inline while (i < N) : (i += 1) {
+                    res[i] = @intCast(T, a[i]);
                 }
                 return res;
             }
@@ -495,8 +511,8 @@ fn VecSizeSpecific(comptime N: u32, comptime T: type) type {
                 return _atanAbs(_atan2(a[1], a[0]));
             }
         } else base;
-    } else if (N == 3 and isFloat) {
-        return struct {
+    } else if (N == 3) {
+        return if (isFloat) struct {
             pub fn orthoNormal(a: V, b: V, c: V) V {
                 return _normalize(T, cross(b - a, c - a), 1.0);
             }
@@ -507,6 +523,24 @@ fn VecSizeSpecific(comptime N: u32, comptime T: type) type {
                 const b1: V = [_]T{ b[2], b[0], b[1] };
                 const b2: V = [_]T{ b[1], b[2], b[0] };
                 return a1 * b1 - a2 * b2;
+            }
+        } else struct {
+            pub fn fromVec2(a: @Vector(2, T), z: T) V {
+                return [_]T{ a[0], a[1], z };
+            }
+        };
+    } else if (N == 4) {
+        return struct {
+            pub fn fromVec2(a: @Vector(2, T), b: @Vector(2, T)) V {
+                return [_]T{ a[0], a[1], b[0], b[1] };
+            }
+
+            pub fn fromVec2N(a: @Vector(2, T), z: T, w: T) V {
+                return [_]T{ a[0], a[1], z, w };
+            }
+
+            pub fn fromVec3(a: @Vector(3, T), w: T) V {
+                return [_]T{ a[0], a[1], a[2], w };
             }
         };
     }
