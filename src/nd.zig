@@ -166,6 +166,19 @@ pub fn NDArray(comptime N: usize, comptime T: type) type {
             }
         }
 
+        pub fn sum(self: *const Self) T {
+            const info = @typeInfo(T);
+            if (!(info == .Int or info == .Float)) @compileError("only supported for int/float types");
+            var acc: T = 0;
+            var iter = self.values(.{});
+            while (true) {
+                if (iter.next()) |val| {
+                    acc += val;
+                } else break;
+            }
+            return acc;
+        }
+
         pub fn toOwnedSlice(self: *const Self, opts: struct {
             data: ?[]T = null,
             allocator: ?*const Allocator = null,
@@ -411,11 +424,11 @@ fn iabs(x: isize) isize {
     return if (x >= 0) x else -x;
 }
 
-pub fn range(n: u32, comptime T: type) !NDArray(1, T) {
+pub fn range(n: u32, comptime T: type, allocator: *const Allocator) !NDArray(1, T) {
     const info = @typeInfo(T);
     if (!(info == .Int or info == .Float)) @compileError("only int or float types supported");
     var res = try NDArray(1, T).init(.{
-        .allocator = &std.heap.page_allocator,
+        .allocator = allocator,
         .shape = .{n},
     });
     var iter = res.indices(.{});
@@ -429,20 +442,22 @@ pub fn range(n: u32, comptime T: type) !NDArray(1, T) {
     return res;
 }
 
-pub fn ones(comptime N: usize, comptime T: type, shape: [N]u32) NDArray(N, T) {
+pub fn ones(comptime N: usize, comptime T: type, shape: [N]u32, allocator: *const Allocator) NDArray(N, T) {
     var res = try NDArray(N, T).init(.{
-        .allocator = &std.heap.page_allocator,
+        .allocator = allocator,
         .shape = shape,
     });
     res.fill(1);
     return res;
 }
 
+const __allocator = &std.testing.allocator;
+
 test "nd3 f32 init" {
     var a = try NDArray(3, f32).init(.{
         .shape = .{ 4, 4, 4 },
         .stride = .{ 1, 4, 16 },
-        .allocator = &std.heap.page_allocator,
+        .allocator = __allocator,
     });
     std.debug.print("a.order {d}\n", .{a.order});
     defer a.free();
@@ -466,26 +481,31 @@ test "nd3 f32 init" {
     try std.testing.expectEqual(@as(f32, 42), b.at(.{ 0, 1, 1 }));
     defer b.free();
 
-    var p = try b.toOwnedSlice(.{ .allocator = &std.heap.page_allocator });
+    var p = try b.toOwnedSlice(.{ .allocator = __allocator });
     std.debug.print("{d}\n", .{p});
+    __allocator.free(p);
+
     b.stride = .{ 1, 4, 16 };
-    p = try b.toOwnedSlice(.{ .allocator = &std.heap.page_allocator });
+    p = try b.toOwnedSlice(.{ .allocator = __allocator });
     std.debug.print("{d}\n", .{p});
+    __allocator.free(p);
 }
 
 test "nd3 f32 iter" {
     var a = try NDArray(3, f32).init(.{
         .shape = .{ 4, 4, 4 },
         .stride = .{ 1, 4, 16 },
-        .allocator = &std.heap.page_allocator,
+        .allocator = __allocator,
     });
+    defer a.free();
     std.debug.print("stride {d}, order {d}\n", .{ a.stride, a.order });
     a.setAt(.{ 0, 1, 1 }, 23);
     a.setAt(.{ 1, 1, 1 }, 42);
 
     try std.testing.expect(a.eqApprox(&a, 1e-9));
 
-    var p = try a.toOwnedSlice(.{ .allocator = &std.heap.page_allocator });
+    var p = try a.toOwnedSlice(.{ .allocator = __allocator });
+    defer __allocator.free(p);
     std.debug.print("{d}\n", .{p});
     var i = a.values(.{});
     while (true) {
@@ -496,7 +516,8 @@ test "nd3 f32 iter" {
 }
 
 test "1d reshape" {
-    var a = try range(16, u32);
+    var a = try range(16, u32, __allocator);
+    defer a.free();
     var b = try a.reshape(4, .{ .shape = .{ 2, 2, 2, 2 } });
     b = try b.transpose(.{ 1, 0, 3, 2 });
     std.debug.print("{d}", .{b.stride});
@@ -509,26 +530,31 @@ test "1d reshape" {
 }
 
 test "2d trunc" {
-    var a = try range(16, u32);
+    var a = try range(16, u32, __allocator);
+    defer a.free();
     var b = try a.reshape(2, .{ .shape = .{ 4, 4 } });
     b = try b.lo(.{ 1, 2 });
     b = try b.hi(.{ 2, 2 });
     std.debug.print("{d}", .{b.shape});
-    var c = try b.toOwnedSlice(.{ .allocator = &std.heap.page_allocator });
+    var c = try b.toOwnedSlice(.{ .allocator = __allocator });
+    defer __allocator.free(c);
     std.debug.print("{d}\n", .{c});
 }
 
 test "3d -> 2d pick" {
-    var a = try range(4 * 4 * 4, u32);
+    var a = try range(4 * 4 * 4, u32, __allocator);
+    defer a.free();
     var b = try a.reshape(3, .{ .shape = .{ 4, 4, 4 } });
     var c = try b.pick(2, .{ 1, null, 1 });
     c.print();
-    var d = try c.toOwnedSlice(.{ .allocator = &std.heap.page_allocator });
+    var d = try c.toOwnedSlice(.{ .allocator = __allocator });
+    defer __allocator.free(d);
     std.debug.print("{d}\n", .{d});
 }
 
 test "3d step" {
-    var a = try range(4 * 4 * 4, u32);
+    var a = try range(4 * 4 * 4, u32, __allocator);
+    defer a.free();
     var b = try NDArray(3, u32).init(.{
         .data = a.data,
         .shape = .{ 4, 4, 4 },
@@ -540,6 +566,24 @@ test "3d step" {
     // var b2 = try a2.reshape(3, .{ .shape = .{ 4, 2, 4 } });
     var c = try b.step(.{ 2, -2, -1 });
     c.print();
-    var d = try c.toOwnedSlice(.{ .allocator = &std.heap.page_allocator });
+    var d = try c.toOwnedSlice(.{ .allocator = __allocator });
+    defer __allocator.free(d);
+    std.debug.print("{d}\n", .{d});
+}
+
+test "3d axis iter" {
+    var a = try range(4 * 4 * 4, u32, __allocator);
+    defer a.free();
+    var b = try NDArray(3, u32).init(.{
+        .data = a.data,
+        .shape = .{ 4, 4, 4 },
+    });
+    // var b = try a.reshape(3, .{ .shape = .{ 4, 4, 4 } });
+    b.print();
+    var c = try b.pick(1, .{ 0, null, null });
+    c.print();
+    std.debug.print("sum {d}\n", .{c.sum()});
+    var d = try c.toOwnedSlice(.{ .allocator = __allocator });
+    defer __allocator.free(d);
     std.debug.print("{d}\n", .{d});
 }
