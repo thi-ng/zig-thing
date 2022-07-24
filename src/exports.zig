@@ -51,8 +51,8 @@ export fn normalize3(a: *Vec3.T) *Vec3.T {
     return a;
 }
 
-export fn maddN3(a: *Vec3.T, b: *const Vec3.T, c: f32) *Vec3.T {
-    a.* = Vec3.maddN(a.*, b.*, c);
+export fn maddN3(a: *Vec3.T, b: f32, c: *const Vec3.T) *Vec3.T {
+    a.* = Vec3.maddN(a.*, b, c.*);
     return a;
 }
 
