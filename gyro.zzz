@@ -1,0 +1,21 @@
+pkgs:
+  thing-vectors:
+    version: 0.0.1
+	root: vectors/src/lib.zig
+    description: Generic n-dimensional vector types & operations
+    license: Apache-2.0
+    homepage_url: https://github.com/thi-ng/zig-thing/blob/main/vectors/
+    source_url: https://github.com/thi-ng/zig-thing/blob/main/vectors/src/lib.zig
+
+    # these are shown on astrolabe
+    tags:
+      vector
+	  linear-algebra
+	  nd
+      simd
+
+    files:
+      LICENSE
+      README.md
+      build.zig
+      src/*.zig
