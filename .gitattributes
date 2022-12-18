@@ -1,6 +1,3 @@
 * text=auto
 *.zig text eol=lf
-zig.mod text eol=lf
-zigmod.* text eol=lf
-zig.mod linguist-language=YAML
-zig.mod gitlab-language=yaml
+*.zzz text eol=lf
