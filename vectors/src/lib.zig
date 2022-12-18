@@ -2,59 +2,54 @@ const std = @import("std");
 const swizzles = @import("swizzle.zig");
 
 /// Returns a zero-size namespace struct defining vector operations for
-/// given size `N` (min: 1) and component type `C` (any integer or float).
+/// given size `SIZE` (min: 1) and component type `CTYPE` (any int or float).
 /// The actual vector type used for these operations is the built-in
-/// `std.meta.Vector` aka SIMD-optimized vectors. The ops defined here
-/// merely act as a more unified and comprehensive API.
-/// Depending on chosen component type `C`, some ops might not be
+/// `@Vector` aka SIMD-capable vectors. The ops defined here merely act
+/// as a more unified and comprehensive API.
+/// Depending on chosen component type `CTYPE`, some ops might not be
 /// available (i.e. float vectors offer much more functionality than
 /// their integer-based counterparts)
-pub fn Vec(comptime N: u32, comptime C: type) type {
-    const INFO = @typeInfo(C);
+pub fn Vec(comptime SIZE: u32, comptime CTYPE: type) type {
+    const INFO = @typeInfo(CTYPE);
     if (!(INFO == .Int or INFO == .Float)) {
-        @compileError("unsupported component type: " ++ C);
+        @compileError("unsupported component type: " ++ CTYPE);
     }
-    if (N < 1) {
+    if (SIZE < 1) {
         @compileError("zero-length vectors not supported");
     }
 
-    const V = @Vector(N, C);
-    const B = @Vector(N, bool);
-
     return struct {
-        /// The resulting vector type: `@Vector(N, C)`
-        pub const T = V;
-        /// The user provided vector component type: C
-        pub const C = C;
-        /// The user provided vector size: N
-        pub const N = N;
+        /// The resulting vector type: `@Vector(SIZE, CTYPE)`
+        pub const V = @Vector(SIZE, CTYPE);
+        /// Boolean vector type: `@Vector(SIZE, bool)`
+        pub const B = @Vector(SIZE, bool);
+        /// The user provided vector component type
+        pub const T = CTYPE;
+        /// The user provided vector size
+        pub const N = SIZE;
 
         /// Vector w/ all components as 0
         pub const ZERO = of(0);
         /// Vector w/ all components as 1
         pub const ONE = of(1);
 
-        pub usingnamespace swizzles.Vec2Swizzles(N, C);
-        pub usingnamespace swizzles.Vec3Swizzles(N, C);
-        pub usingnamespace swizzles.Vec4Swizzles(N, C);
+        pub usingnamespace swizzles.Vec2Swizzles(N, T);
+        pub usingnamespace swizzles.Vec3Swizzles(N, T);
+        pub usingnamespace swizzles.Vec4Swizzles(N, T);
 
-        pub usingnamespace VecSizeSpecific(N, C);
-        pub usingnamespace VecTypeSpecific(N, C);
+        pub usingnamespace VecSizeSpecific(N, T);
+        pub usingnamespace VecTypeSpecific(N, T);
 
-        pub inline fn x(a: V) C {
-            return a[0];
-        }
-
-        pub inline fn addN(a: V, n: C) V {
+        pub inline fn addN(a: V, n: T) V {
             return a + of(n);
         }
 
         /// Returns index of the smallest component
-        pub fn argmin(a: V) u32 {
-            var res: u32 = 0;
-            var acc: C = a[0];
-            comptime var i = 1;
-            inline while (i < N) : (i += 1) {
+        pub fn argmin(a: V) usize {
+            var res: usize = 0;
+            var acc: T = a[0];
+            var i: usize = 1;
+            while (i < N) : (i += 1) {
                 if (a[i] < acc) {
                     acc = a[i];
                     res = i;
@@ -64,11 +59,11 @@ pub fn Vec(comptime N: u32, comptime C: type) type {
         }
 
         /// Returns index of the largest component
-        pub fn argmax(a: V) u32 {
-            var res: u32 = 0;
-            var acc: C = a[0];
-            comptime var i = 1;
-            inline while (i < N) : (i += 1) {
+        pub fn argmax(a: V) usize {
+            var res: usize = 0;
+            var acc: T = a[0];
+            var i: usize = 1;
+            while (i < N) : (i += 1) {
                 if (a[i] > acc) {
                     acc = a[i];
                     res = i;
@@ -83,27 +78,31 @@ pub fn Vec(comptime N: u32, comptime C: type) type {
             while (i < a.len) : (i += 1) {
                 res += a[i];
             }
-            return divN(res, @intToFloat(C, a.len));
+            return divN(res, @intToFloat(T, a.len));
         }
 
         pub fn clamp(a: V, b: V, c: V) V {
             return min(max(a, b), c);
         }
 
-        pub inline fn distSq(a: V, b: V) C {
+        pub inline fn distSq(a: V, b: V) T {
             return magSq(a - b);
         }
 
-        pub inline fn divN(a: V, n: C) V {
+        pub inline fn divN(a: V, n: T) V {
             return if (INFO == .Int) @divTrunc(a, of(n)) else a / of(n);
         }
 
-        pub inline fn dot(a: V, b: V) C {
-            return _dot(C, a, b);
+        pub inline fn dot(a: V, b: V) T {
+            return _dot(T, a, b);
         }
 
         pub inline fn equal(a: V, b: V) bool {
-            return BVec(N).all(a == b);
+            return BVec(SIZE).all(a == b);
+        }
+
+        pub inline fn fromBVec(a: B) V {
+            return select(a, ONE, ZERO);
         }
 
         pub fn fill(buf: []V, val: V) void {
@@ -112,28 +111,23 @@ pub fn Vec(comptime N: u32, comptime C: type) type {
             }
         }
 
-        pub inline fn fromBVec(a: B) V {
-            return select(a, ONE, ZERO);
-        }
-
         pub inline fn isZero(a: V) bool {
-            return BVec(N).all(a == ZERO);
+            return BVec(SIZE).all(a == ZERO);
         }
 
-        /// computes a * b + c, where `a` and `c` are vectors and `b` is a scalar
-        pub inline fn maddN(a: V, n: C, b: V) V {
+        pub inline fn maddN(a: V, n: T, b: V) V {
             return a * of(n) + b;
         }
 
-        pub inline fn magSq(a: V) C {
-            return _dot(C, a, a);
+        pub inline fn magSq(a: V) T {
+            return _dot(T, a, a);
         }
 
         pub inline fn min(a: V, b: V) V {
             return select(a < b, a, b);
         }
 
-        pub inline fn minComp(a: V) C {
+        pub inline fn minComp(a: V) T {
             return @reduce(.Min, a);
         }
 
@@ -141,70 +135,62 @@ pub fn Vec(comptime N: u32, comptime C: type) type {
             return select(a > b, a, b);
         }
 
-        pub inline fn maxComp(a: V) C {
+        pub inline fn maxComp(a: V) T {
             return @reduce(.Max, a);
         }
 
-        pub inline fn mulN(a: V, n: C) V {
+        pub inline fn mulN(a: V, n: T) V {
             return a * of(n);
         }
 
-        pub inline fn of(n: C) V {
-            return @splat(N, n);
+        pub inline fn of(n: T) V {
+            return @splat(SIZE, n);
         }
 
-        pub inline fn product(a: V) C {
+        pub inline fn product(a: V) T {
             return @reduce(.Mul, a);
         }
 
         pub inline fn select(mask: B, a: V, b: V) V {
-            return @select(C, mask, a, b);
+            return @select(T, mask, a, b);
         }
 
-        pub inline fn step(e0: V, a: V) V {
-            return select(a < e0, ZERO, ONE);
+        pub inline fn step(edge: V, a: V) V {
+            return select(a < edge, ZERO, ONE);
         }
 
-        pub inline fn subN(a: V, n: C) V {
+        pub inline fn subN(a: V, n: T) V {
             return a - of(n);
         }
 
-        pub inline fn sum(a: V) C {
+        pub inline fn sum(a: V) T {
             return @reduce(.Add, a);
         }
     };
 }
 
-fn VecTypeSpecific(comptime N: u32, comptime T: type) type {
-    const V = @Vector(N, T);
+fn VecTypeSpecific(comptime SIZE: u32, comptime T: type) type {
+    const V = @Vector(SIZE, T);
     const INFO = @typeInfo(T);
     const eqd = struct {
         pub fn allEqDelta(a: V, b: V, eps: T) bool {
-            return BVec(N).all(eqDelta(a, b, eps));
+            return BVec(SIZE).all(eqDelta(a, b, eps));
         }
 
-        pub fn eqDelta(a: V, b: V, eps: T) @Vector(N, bool) {
+        pub fn eqDelta(a: V, b: V, eps: T) @Vector(SIZE, bool) {
             const delta = a - b;
             const invDelta = -delta;
-            return @select(T, delta > invDelta, delta, invDelta) <= @splat(N, eps);
+            return @select(T, delta > invDelta, delta, invDelta) <= @splat(SIZE, eps);
         }
     };
     if (INFO == .Int) {
         const base = struct {
-            pub inline fn fromVec(comptime S: type, a: @Vector(N, S)) V {
+            pub fn fromVec(comptime S: type, a: @Vector(SIZE, S)) V {
                 comptime var i = 0;
-                var res: [N]T = undefined;
-                inline while (i < N) : (i += 1) {
-                    res[i] = @floatToInt(T, a[i]);
-                }
-                return res;
-            }
-
-            pub inline fn fromIVec(comptime S: type, a: @Vector(N, S)) V {
-                comptime var i = 0;
-                var res: [N]T = undefined;
-                inline while (i < N) : (i += 1) {
-                    res[i] = @intCast(T, a[i]);
+                const isFloat = @typeInfo(S) == .Float;
+                var res: [SIZE]T = undefined;
+                inline while (i < SIZE) : (i += 1) {
+                    res[i] = if (isFloat) @floatToInt(T, a[i]) else @intCast(T, a[i]);
                 }
                 return res;
             }
@@ -226,7 +212,7 @@ fn VecTypeSpecific(comptime N: u32, comptime T: type) type {
             }
 
             pub inline fn pow(a: V, n: T) V {
-                return _map(N, T, a, _powi, .{n});
+                return _map(SIZE, T, a, _powi, .{n});
             }
         };
         return if (isSignedInt(T)) struct {
@@ -234,27 +220,28 @@ fn VecTypeSpecific(comptime N: u32, comptime T: type) type {
             pub usingnamespace eqd;
 
             /// Vector w/ all components as -1
-            pub const MINUS_ONE = @splat(N, -1);
+            pub const MINUS_ONE = @splat(SIZE, -1);
 
             pub inline fn abs(a: V) V {
-                return @select(T, a >= @splat(N, 0), a, -a);
+                return @select(T, a >= @splat(SIZE, 0), a, -a);
             }
         } else base;
     } else {
         return struct {
             pub usingnamespace eqd;
 
-            pub const INF = @splat(N, std.math.inf(T));
-            pub const NEG_INF = @splat(N, -std.math.inf(T));
+            pub const INF = @splat(SIZE, std.math.inf(T));
+            pub const NEG_INF = @splat(SIZE, -std.math.inf(T));
 
             /// Vector w/ all components as -1
-            pub const MINUS_ONE = @splat(N, -1);
+            pub const MINUS_ONE = @splat(SIZE, -1);
 
-            pub inline fn fromIVec(comptime S: type, a: @Vector(N, S)) V {
+            pub inline fn fromVec(comptime S: type, a: @Vector(SIZE, S)) V {
                 comptime var i = 0;
-                var res: [N]T = undefined;
-                inline while (i < N) : (i += 1) {
-                    res[i] = @intToFloat(T, a[i]);
+                const isInt = @typeInfo(S) == .Int;
+                var res: [SIZE]T = undefined;
+                inline while (i < SIZE) : (i += 1) {
+                    res[i] = if (isInt) @intToFloat(T, a[i]) else @floatCast(T, a[i]);
                 }
                 return res;
             }
@@ -264,7 +251,7 @@ fn VecTypeSpecific(comptime N: u32, comptime T: type) type {
             }
 
             pub inline fn acos(a: V) V {
-                return _map(N, T, a, std.math.acos, .{});
+                return _map(SIZE, T, a, std.math.acos, .{});
             }
 
             pub inline fn angleBetween(a: V, b: V) T {
@@ -272,15 +259,15 @@ fn VecTypeSpecific(comptime N: u32, comptime T: type) type {
             }
 
             pub inline fn asin(a: V) V {
-                return _map(N, T, a, std.math.asin, .{});
+                return _map(SIZE, T, a, std.math.asin, .{});
             }
 
             pub inline fn atan(a: V) V {
-                return _map(N, T, a, std.math.atan, .{});
+                return _map(SIZE, T, a, std.math.atan, .{});
             }
 
             pub inline fn atan2(a: V, b: V) V {
-                return _map2(N, T, a, b, _atan2, .{});
+                return _map2(SIZE, T, a, b, _atan2, .{});
             }
 
             pub inline fn ceil(a: V) V {
@@ -288,12 +275,12 @@ fn VecTypeSpecific(comptime N: u32, comptime T: type) type {
             }
 
             pub inline fn center(a: V) V {
-                return a - @splat(N, mean(a));
+                return a - @splat(SIZE, mean(a));
             }
 
             pub inline fn clamp01(a: V) V {
-                const zero = _splat(N, T, 0);
-                const one = _splat(N, T, 1);
+                const zero = _splat(SIZE, T, 0);
+                const one = _splat(SIZE, T, 1);
                 const res = @select(T, a > zero, a, zero);
                 return @select(T, res < one, res, one);
             }
@@ -322,8 +309,24 @@ fn VecTypeSpecific(comptime N: u32, comptime T: type) type {
                 return mix(d, e, (a - b) / (c - b));
             }
 
+            pub inline fn fitN(a: V, b: T, c: T, d: T, e: T) V {
+                return mix(
+                    @splat(SIZE, d),
+                    @splat(SIZE, e),
+                    (a - @splat(SIZE, b)) / @splat(SIZE, c - b),
+                );
+            }
+
             pub inline fn fitClamped(a: V, b: V, c: V, d: V, e: V) V {
                 return mix(d, e, clamp01((a - b) / (c - b)));
+            }
+
+            pub inline fn fitNClamped(a: V, b: T, c: T, d: T, e: T) V {
+                return mix(
+                    @splat(SIZE, d),
+                    @splat(SIZE, e),
+                    clamp01((a - @splat(SIZE, b)) / @splat(SIZE, c - b)),
+                );
             }
 
             pub inline fn fit01(a: V, b: V, c: V) V {
@@ -334,8 +337,12 @@ fn VecTypeSpecific(comptime N: u32, comptime T: type) type {
                 return @floor(a);
             }
 
+            pub inline fn fract(a: V) V {
+                return a - @trunc(a);
+            }
+
             pub inline fn invSqrt(a: V) V {
-                return _splat(N, T, 1) / @sqrt(a);
+                return _splat(SIZE, T, 1) / @sqrt(a);
             }
 
             pub inline fn log(a: V) V {
@@ -355,7 +362,7 @@ fn VecTypeSpecific(comptime N: u32, comptime T: type) type {
             }
 
             pub inline fn mean(a: V) T {
-                return @reduce(.Add, a) / @as(T, N);
+                return @reduce(.Add, a) / @as(T, SIZE);
             }
 
             pub inline fn mix(a: V, b: V, t: V) V {
@@ -363,11 +370,15 @@ fn VecTypeSpecific(comptime N: u32, comptime T: type) type {
             }
 
             pub inline fn mixN(a: V, b: V, n: T) V {
-                return mix(a, b, @splat(N, n));
+                return mix(a, b, @splat(SIZE, n));
             }
 
             pub inline fn mod(a: V, b: V) V {
-                return _map2(N, T, a, b, _mod, .{});
+                return _map2(SIZE, T, a, b, _mod, .{});
+            }
+
+            pub inline fn modN(a: V, b: T) V {
+                return _map2(SIZE, T, a, @splat(SIZE, b), _mod, .{});
             }
 
             pub inline fn normalize(a: V) V {
@@ -376,28 +387,28 @@ fn VecTypeSpecific(comptime N: u32, comptime T: type) type {
 
             pub inline fn normalizeTo(a: V, n: T) V {
                 const m = mag(a);
-                return if (m > 1e-6) a * @splat(N, n / m) else a;
+                return if (m > 1e-6) a * @splat(SIZE, n / m) else a;
             }
 
             pub inline fn pow(a: V, b: V) V {
-                return _map2(N, T, a, b, _pow, .{});
+                return _map2(SIZE, T, a, b, _pow, .{});
             }
 
             pub inline fn powN(a: V, n: T) V {
-                return _map(N, T, a, _pow, .{n});
+                return _map(SIZE, T, a, _pow, .{n});
             }
 
             pub inline fn reflect(a: V, n: V) V {
-                return n * @splat(N, -2 * _dot(T, a, n)) + a;
+                return n * @splat(SIZE, -2 * _dot(T, a, n)) + a;
             }
 
             pub inline fn refract(a: V, n: V, eta: T) V {
                 const d = _dot(T, a, n);
                 const k = 1.0 - eta * eta * (1.0 - d * d);
                 return if (k < 0)
-                    _splat(N, T, 0)
+                    _splat(SIZE, T, 0)
                 else
-                    n * @splat(N, -(eta * d + @sqrt(k))) + a * @splat(N, eta);
+                    n * @splat(SIZE, -(eta * d + @sqrt(k))) + a * @splat(SIZE, eta);
             }
 
             pub inline fn round(a: V) V {
@@ -405,11 +416,11 @@ fn VecTypeSpecific(comptime N: u32, comptime T: type) type {
             }
 
             pub inline fn sd(a: V) T {
-                return @sqrt(_dot(T, a, a) / @as(T, N - 1));
+                return @sqrt(_dot(T, a, a) / @as(T, SIZE - 1));
             }
 
             pub inline fn sdError(a: V) T {
-                return sd(a) / @sqrt(@as(T, N));
+                return sd(a) / @sqrt(@as(T, SIZE));
             }
 
             pub inline fn sin(a: V) V {
@@ -418,7 +429,7 @@ fn VecTypeSpecific(comptime N: u32, comptime T: type) type {
 
             pub inline fn smoothStep(e0: V, e1: V, a: V) V {
                 const x = clamp01((a - e0) / (e1 - e0));
-                return (_splat(N, T, 3) - _splat(N, T, 2) * x) * x * x;
+                return (_splat(SIZE, T, 3) - _splat(SIZE, T, 2) * x) * x * x;
             }
 
             pub inline fn sqrt(a: V) V {
@@ -428,11 +439,11 @@ fn VecTypeSpecific(comptime N: u32, comptime T: type) type {
             pub inline fn standardize(a: V) V {
                 const c = center(a);
                 const d = sd(c);
-                return if (d > 0) c / @splat(N, d) else c;
+                return if (d > 0) c / @splat(SIZE, d) else c;
             }
 
             pub inline fn tan(a: V) V {
-                return _map(N, T, a, std.math.tan, .{});
+                return _map(SIZE, T, a, std.math.tan, .{});
             }
 
             pub inline fn trunc(a: V) V {
@@ -440,18 +451,17 @@ fn VecTypeSpecific(comptime N: u32, comptime T: type) type {
             }
 
             pub inline fn variance(a: V) T {
-                return _dot(T, a, a) / @as(T, N);
+                return _dot(T, a, a) / @as(T, SIZE);
             }
         };
     }
 }
 
-pub fn BVec(comptime N: u32) type {
-    const V = @Vector(N, bool);
+pub fn BVec(comptime SIZE: u32) type {
     return struct {
-        pub const T = V;
-        pub const C = bool;
-        pub const N = N;
+        pub const V = @Vector(SIZE, bool);
+        pub const T = bool;
+        pub const N = SIZE;
 
         pub const FALSE = @This().of(false);
         pub const TRUE = @This().of(true);
@@ -461,15 +471,15 @@ pub fn BVec(comptime N: u32) type {
         }
 
         pub inline fn _not(a: V) V {
-            return _map(N, bool, a, _bnot, .{});
+            return _map(SIZE, bool, a, _bnot, .{});
         }
 
         pub inline fn _and(a: V, b: V) V {
-            return _map2(N, bool, a, b, _band, .{});
+            return _map2(SIZE, bool, a, b, _band, .{});
         }
 
         pub inline fn _or(a: V, b: V) V {
-            return _map2(N, bool, a, b, _bor, .{});
+            return _map2(SIZE, bool, a, b, _bor, .{});
         }
 
         pub inline fn any(v: V) bool {
@@ -477,7 +487,7 @@ pub fn BVec(comptime N: u32) type {
         }
 
         pub inline fn of(n: bool) V {
-            return @splat(N, n);
+            return @splat(SIZE, n);
         }
 
         pub inline fn select(mask: V, a: V, b: V) V {
@@ -486,11 +496,11 @@ pub fn BVec(comptime N: u32) type {
     };
 }
 
-fn VecSizeSpecific(comptime N: u32, comptime T: type) type {
-    const V = @Vector(N, T);
+fn VecSizeSpecific(comptime SIZE: u32, comptime T: type) type {
+    const V = @Vector(SIZE, T);
     const INFO = @typeInfo(T);
     const isFloat = INFO == .Float;
-    if (N == 2) {
+    if (SIZE == 2) {
         const base = if (isFloat or isSignedInt(T)) struct {
             pub fn perpendicularCCW(a: V) V {
                 return [_]T{ -a[1], a[0] };
@@ -510,9 +520,22 @@ fn VecSizeSpecific(comptime N: u32, comptime T: type) type {
             pub inline fn heading(a: V) T {
                 return _atanAbs(_atan2(a[1], a[0]));
             }
+
+            pub fn rotate(a: V, theta: T) V {
+                const s = @sin(theta);
+                const c = @cos(theta);
+                return [_]T{
+                    a[0] * c - a[1] * s,
+                    a[0] * s + a[1] * c,
+                };
+            }
         } else base;
-    } else if (N == 3) {
+    } else if (SIZE == 3) {
         return if (isFloat) struct {
+            pub fn fromVec2(a: @Vector(2, T), z: T) V {
+                return [_]T{ a[0], a[1], z };
+            }
+
             pub fn orthoNormal(a: V, b: V, c: V) V {
                 return _normalize(T, cross(b - a, c - a), 1.0);
             }
@@ -522,14 +545,44 @@ fn VecSizeSpecific(comptime N: u32, comptime T: type) type {
                 const a2: V = [_]T{ a[2], a[0], a[1] };
                 const b1: V = [_]T{ b[2], b[0], b[1] };
                 const b2: V = [_]T{ b[1], b[2], b[0] };
-                return a1 * b1 - a2 * b2;
+                return (a1 * b1) - (a2 * b2);
+            }
+
+            pub fn rotateX(a: V, theta: T) V {
+                const s = @sin(theta);
+                const c = @cos(theta);
+                return [_]T{
+                    a[0],
+                    a[1] * c - a[2] * s,
+                    a[1] * s + a[2] * c,
+                };
+            }
+
+            pub fn rotateY(a: V, theta: T) V {
+                const s = @sin(theta);
+                const c = @cos(theta);
+                return [_]T{
+                    a[2] * s + a[0] * c,
+                    a[1],
+                    a[2] * c - a[0] * s,
+                };
+            }
+
+            pub fn rotateZ(a: V, theta: T) V {
+                const s = @sin(theta);
+                const c = @cos(theta);
+                return [_]T{
+                    a[0] * c - a[1] * s,
+                    a[0] * s + a[1] * c,
+                    a[2],
+                };
             }
         } else struct {
             pub fn fromVec2(a: @Vector(2, T), z: T) V {
                 return [_]T{ a[0], a[1], z };
             }
         };
-    } else if (N == 4) {
+    } else if (SIZE == 4) {
         return struct {
             pub fn fromVec2(a: @Vector(2, T), b: @Vector(2, T)) V {
                 return [_]T{ a[0], a[1], b[0], b[1] };
@@ -552,28 +605,28 @@ fn isSignedInt(comptime a: type) bool {
     return info == .Int and info.Int.signedness == std.builtin.Signedness.signed;
 }
 
-fn _map(comptime N: u32, comptime T: type, a: @Vector(N, T), comptime f: anytype, args: anytype) @TypeOf(a) {
+fn _map(comptime SIZE: u32, comptime T: type, a: @Vector(SIZE, T), comptime f: anytype, args: anytype) @TypeOf(a) {
     comptime var opts: std.builtin.CallOptions = .{};
     comptime var i = 0;
-    var res: [N]T = undefined;
-    inline while (i < N) : (i += 1) {
+    var res: [SIZE]T = undefined;
+    inline while (i < SIZE) : (i += 1) {
         res[i] = @call(opts, f, .{a[i]} ++ args);
     }
     return res;
 }
 
-fn _map2(comptime N: u32, comptime T: type, a: @Vector(N, T), b: @Vector(N, T), comptime f: anytype, args: anytype) @TypeOf(a) {
+fn _map2(comptime SIZE: u32, comptime T: type, a: @Vector(SIZE, T), b: @Vector(SIZE, T), comptime f: anytype, args: anytype) @TypeOf(a) {
     comptime var opts: std.builtin.CallOptions = .{};
     comptime var i = 0;
-    var res: [N]T = undefined;
-    inline while (i < N) : (i += 1) {
+    var res: [SIZE]T = undefined;
+    inline while (i < SIZE) : (i += 1) {
         res[i] = @call(opts, f, .{ a[i], b[i] } ++ args);
     }
     return res;
 }
 
-inline fn _splat(comptime N: u32, comptime T: type, n: T) @Vector(N, T) {
-    return @splat(N, n);
+inline fn _splat(comptime SIZE: u32, comptime T: type, n: T) @Vector(SIZE, T) {
+    return @splat(SIZE, n);
 }
 
 inline fn _dot(comptime T: type, a: anytype, b: anytype) T {
@@ -618,41 +671,41 @@ inline fn _bnot(a: bool) bool {
     return !a;
 }
 
-pub const Vec2 = Vec(2, f32);
-pub const Vec3 = Vec(3, f32);
-pub const Vec4 = Vec(4, f32);
+pub const vec2 = Vec(2, f32);
+pub const vec3 = Vec(3, f32);
+pub const vec4 = Vec(4, f32);
 
-pub const IVec2 = Vec(2, i32);
-pub const IVec3 = Vec(3, i32);
-pub const IVec4 = Vec(4, i32);
+pub const ivec2 = Vec(2, i32);
+pub const ivec3 = Vec(3, i32);
+pub const ivec4 = Vec(4, i32);
 
-pub const UVec2 = Vec(2, u32);
-pub const UVec3 = Vec(3, u32);
-pub const UVec4 = Vec(4, u32);
+pub const uvec2 = Vec(2, u32);
+pub const uvec3 = Vec(3, u32);
+pub const uvec4 = Vec(4, u32);
 
-pub const BVec2 = BVec(2);
-pub const BVec3 = BVec(3);
-pub const BVec4 = BVec(4);
+pub const bvec2 = BVec(2);
+pub const bvec3 = BVec(3);
+pub const bvec4 = BVec(4);
 
 const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 
 test "Vec.argmin" {
-    try expectEqual(@as(u32, 0), Vec4.argmin([_]f32{ -4, 3, 2, 1 }));
-    try expectEqual(@as(u32, 1), Vec4.argmin([_]f32{ 4, -3, 2, 1 }));
-    try expectEqual(@as(u32, 2), Vec4.argmin([_]f32{ 4, 3, -2, 1 }));
-    try expectEqual(@as(u32, 3), Vec4.argmin([_]f32{ 4, 3, 2, -1 }));
+    try expectEqual(@as(usize, 0), vec4.argmin([_]f32{ -4, 3, 2, 1 }));
+    try expectEqual(@as(usize, 1), vec4.argmin([_]f32{ 4, -3, 2, 1 }));
+    try expectEqual(@as(usize, 2), vec4.argmin([_]f32{ 4, 3, -2, 1 }));
+    try expectEqual(@as(usize, 3), vec4.argmin([_]f32{ 4, 3, 2, -1 }));
 }
 
 test "Vec.argmax" {
-    try expectEqual(@as(u32, 0), Vec4.argmax([_]f32{ 4, -3, -2, -1 }));
-    try expectEqual(@as(u32, 1), Vec4.argmax([_]f32{ -4, 3, -2, -1 }));
-    try expectEqual(@as(u32, 2), Vec4.argmax([_]f32{ -4, -3, 2, -1 }));
-    try expectEqual(@as(u32, 3), Vec4.argmax([_]f32{ -4, -3, -2, 1 }));
+    try expectEqual(@as(usize, 0), vec4.argmax([_]f32{ 4, -3, -2, -1 }));
+    try expectEqual(@as(usize, 1), vec4.argmax([_]f32{ -4, 3, -2, -1 }));
+    try expectEqual(@as(usize, 2), vec4.argmax([_]f32{ -4, -3, 2, -1 }));
+    try expectEqual(@as(usize, 3), vec4.argmax([_]f32{ -4, -3, -2, 1 }));
 }
 
 test "Vec.centroid" {
-    try expect(Vec3.equal(Vec3.centroid(&[_]Vec3.T{
+    try expect(vec3.equal(vec3.centroid(&[_]vec3.V{
         [_]f32{ 10, 100, 1000 },
         [_]f32{ 20, -200, -500 },
         [_]f32{ -60, 400, -800 },
@@ -660,37 +713,45 @@ test "Vec.centroid" {
 }
 
 test "Vec.clamp" {
-    try expect(Vec3.equal(Vec3.clamp([_]f32{ -3, 2, 0.5 }, [_]f32{ -1, -1, -1 }, Vec3.ONE), [_]f32{ -1, 1, 0.5 }));
+    try expect(vec3.equal(vec3.clamp([_]f32{ -3, 2, 0.5 }, [_]f32{ -1, -1, -1 }, vec3.ONE), [_]f32{ -1, 1, 0.5 }));
 }
 
 test "Vec.distSq" {
-    try expectEqual(@as(i32, 75), IVec3.distSq([_]i32{ -4, 3, -2 }, [_]i32{ 1, -2, 3 }));
+    try expectEqual(@as(i32, 75), ivec3.distSq([_]i32{ -4, 3, -2 }, [_]i32{ 1, -2, 3 }));
 }
 
 test "Vec.dot" {
-    try expectEqual(@as(i32, -10 - 40 - 90), IVec3.dot([_]i32{ -1, 2, -3 }, [_]i32{ 10, -20, 30 }));
+    try expectEqual(@as(i32, -10 - 40 - 90), ivec3.dot([_]i32{ -1, 2, -3 }, [_]i32{ 10, -20, 30 }));
 }
 
 test "Vec.equal" {
-    try expect(Vec2.equal([_]f32{ -1, 2 }, [_]f32{ -1, 2 }));
-    try expect(!Vec2.equal([_]f32{ -1, 2 }, [_]f32{ -1.01, 2.01 }));
+    try expect(vec2.equal([_]f32{ -1, 2 }, [_]f32{ -1, 2 }));
+    try expect(!vec2.equal([_]f32{ -1, 2 }, [_]f32{ -1.01, 2.01 }));
 }
 
 test "Vec.eqDelta" {
-    try expect(Vec2.allEqDelta([_]f32{ -1, 2 }, [_]f32{ -1.09, 2.09 }, 0.1));
-    try expect(!Vec2.allEqDelta([_]f32{ -1, 2 }, [_]f32{ -1.09, 2.09 }, 0.01));
+    try expect(vec2.allEqDelta([_]f32{ -1, 2 }, [_]f32{ -1.09, 2.09 }, 0.1));
+    try expect(!vec2.allEqDelta([_]f32{ -1, 2 }, [_]f32{ -1.09, 2.09 }, 0.01));
     try expect(Vec(6, f32).allEqDelta([_]f32{ -1, 2, -3, 4, -5, 6 }, [_]f32{ -1.01, 2.01, -3.01, 4.01, -5.01, 6.01 }, 0.011));
     // unsupported for unsigned
-    try expect(!@hasDecl(UVec2, "eqDelta"));
-    try expect(!@hasDecl(UVec2, "allEqDelta"));
+    try expect(!@hasDecl(uvec2, "eqDelta"));
+    try expect(!@hasDecl(uvec2, "allEqDelta"));
 }
 
 test "Vec2.perpendicular" {
-    try expect(Vec2.allEqDelta(Vec2.perpendicularCCW([_]f32{ 1, 2 }), [_]f32{ -2, 1 }, 0));
-    try expect(Vec2.allEqDelta(Vec2.perpendicularCW([_]f32{ 1, 2 }), [_]f32{ 2, -1 }, 0));
-    try expect(IVec2.allEqDelta(IVec2.perpendicularCCW([_]i32{ 1, 2 }), [_]i32{ -2, 1 }, 0));
-    try expect(IVec2.allEqDelta(IVec2.perpendicularCW([_]i32{ 1, 2 }), [_]i32{ 2, -1 }, 0));
+    try expect(vec2.allEqDelta(vec2.perpendicularCCW([_]f32{ 1, 2 }), [_]f32{ -2, 1 }, 0));
+    try expect(vec2.allEqDelta(vec2.perpendicularCW([_]f32{ 1, 2 }), [_]f32{ 2, -1 }, 0));
+    try expect(ivec2.allEqDelta(ivec2.perpendicularCCW([_]i32{ 1, 2 }), [_]i32{ -2, 1 }, 0));
+    try expect(ivec2.allEqDelta(ivec2.perpendicularCW([_]i32{ 1, 2 }), [_]i32{ 2, -1 }, 0));
     // unsupported/unimplemented for unsigned
-    try expect(!@hasDecl(UVec2, "perpendicularCCW"));
-    try expect(!@hasDecl(UVec2, "perpendicularCW"));
+    try expect(!@hasDecl(uvec2, "perpendicularCCW"));
+    try expect(!@hasDecl(uvec2, "perpendicularCW"));
+}
+
+test "Vec4.swizzle" {
+    try expect(vec4.equal(vec4.xxzz([_]f32{ 1, 2, 3, 4 }), [_]f32{ 1, 1, 3, 3 }));
+}
+
+test "Vec4.isZero" {
+    std.debug.print("{}\n", .{@as(vec4.V, [_]f32{ 10, 0, -20, 0 }) == vec4.ZERO});
 }
