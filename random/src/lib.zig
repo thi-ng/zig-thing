@@ -28,7 +28,7 @@ pub fn minmaxInt(comptime T: type, rnd: *Random, min: T, max: T) T {
 }
 
 pub fn pick(comptime T: type, rnd: *Random, opts: anytype) T {
-    return opts[@mod(rnd.int(u32), opts.len)];
+    return opts[rnd.uintLessThan(usize, opts.len)];
 }
 
 pub fn pickWeighted(comptime T: type, rnd: *Random, opts: anytype, weights: []const f32) T {
