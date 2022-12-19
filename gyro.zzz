@@ -18,6 +18,23 @@ pkgs:
       build.zig
       src/*.zig
 
+  thing-random:
+    version: 0.0.1
+    root: random/src/lib.zig
+    description: Additional std.rand.Random-compatible PRNGs and related utilities
+    license: Apache-2.0
+    homepage_url: https://github.com/thi-ng/zig-thing/blob/main/random/
+    source_url: https://github.com/thi-ng/zig-thing/blob/main/random/src/lib.zig
+    tags:
+      prng
+      random
+      sfc32
+    files:
+      LICENSE
+      README.md
+      build.zig
+      src/*.zig
+
   thing-vectors:
     version: 0.0.1
     root: vectors/src/lib.zig
