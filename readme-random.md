@@ -1,4 +1,4 @@
-# thing-random
+# thing.random
 
 ## About
 

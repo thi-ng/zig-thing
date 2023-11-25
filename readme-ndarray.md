@@ -1,4 +1,4 @@
-# thing-ndarray
+# thing.ndarray
 
 ## About
 

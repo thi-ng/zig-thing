@@ -1,4 +1,4 @@
-# thing-vectors
+# thing.math.vectors
 
 nD vector types & operations
 

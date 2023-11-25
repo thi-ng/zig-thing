@@ -1,7 +1,7 @@
 const std = @import("std");
 const Random = std.rand.Random;
 
-pub const Sfc32 = @import("sfc32.zig");
+pub const Sfc32 = @import("random/sfc32.zig");
 
 /// Returns uniformly distributed value in [-n..n) interval
 pub fn norm(comptime T: type, rnd: *Random, n: T) T {

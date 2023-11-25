@@ -1,5 +1,5 @@
 const std = @import("std");
-const swizzles = @import("swizzle.zig");
+const swizzles = @import("vectors/swizzle.zig");
 
 /// Returns a zero-size namespace struct defining vector operations for
 /// given size `SIZE` (min: 1) and component type `CTYPE` (any int or float).
@@ -749,5 +749,8 @@ test "Vec4.swizzle" {
 }
 
 test "Vec4.isZero" {
-    std.debug.print("{}\n", .{@as(vec4.V, [_]f32{ 10, 0, -20, 0 }) == vec4.ZERO});
+    try expectEqual(
+        @as(vec4.V, [_]f32{ 10, 0, -20, 0 }) == vec4.ZERO,
+        @as(bvec4.V, [_]bool{ false, true, false, true }),
+    );
 }
