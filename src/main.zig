@@ -6,5 +6,6 @@ pub const vectors = @import("vectors.zig");
 
 test {
     _ = @import("dual-list.zig");
+    _ = @import("ndarray.zig");
     _ = @import("vectors.zig");
 }
