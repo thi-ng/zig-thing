@@ -1,5 +1,9 @@
 # thing.ndarray
 
+```zig
+const nd = @import("thing").ndarray;
+```
+
 ## About
 
 Generic nD-Array base implementation

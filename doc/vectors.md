@@ -1,5 +1,9 @@
 # thing.vectors
 
+```zig
+const vectors = @import("thing").vectors;
+```
+
 nD vector types & operations
 
 ## About
@@ -129,7 +133,7 @@ Type generics used:
 ### Vector swizzling
 
 [Named
-swizzles](https://github.com/thi-ng/zig-thing/blob/main/vectors/src/swizzle.zig)
+swizzles](https://github.com/thi-ng/zig-thing/blob/main/src/vectors/swizzle.zig)
 are implemented for 2D, 3D and 4D vectors, e.g. `vec3.zyx()`, `vec4.xxzz()` etc.
 
 ### Boolean vector operations

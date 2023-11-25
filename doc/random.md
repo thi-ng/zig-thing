@@ -1,5 +1,10 @@
 # thing.random
 
+```zig
+const rnd = @import("thing").random;
+const Sfc32 = @import("thing").random.Sfc32;
+```
+
 ## About
 
 Additional `std.rand.Random`-compatible PRNGs and related utilities.
