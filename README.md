@@ -18,7 +18,7 @@ into a monorepo of useful libraries.
 ## Usage with Zig's package manager
 
 There are no releases of this project available yet, you can refer to a certain
-commit and add this to your `build.zig.zon` file:
+commit and add something like this to your `build.zig.zon` file:
 
 ```zig
 .{
@@ -42,10 +42,7 @@ const optimize = b.standardOptimizeOption(.{});
 const exe = b.addExecutable(.{ ... });
 
 // declare & configure dependency (via build.zig.zon)
-const thing = b.dependency("thing", .{
-    .target = target,
-    .optimize = optimize,
-}).module("thing");
+const thing = b.dependency("thing", .{}).module("thing");
 
 // declare dependency for importing
 exe.addModule("thing", thing);
