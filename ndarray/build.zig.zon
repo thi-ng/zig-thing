@@ -1,0 +1,4 @@
+.{
+    .name = "thing-ndarray",
+    .version = "0.0.2",
+}
