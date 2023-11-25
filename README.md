@@ -22,7 +22,7 @@ commit and add this to your `build.zig.zon` file:
 
 ```zig
 .{
-	.dependencies = .{
+    .dependencies = .{
         .thing = .{
             .url = "https://github.com/thi-ng/zig-thing/archive/51e912790d50a8f7f81cb9820ad8d7c69696bb47.tar.gz",
             .hash = "1220234550c34577c708d0779d8eb4d4a2270a188585cb3755208153789407fa7483",
