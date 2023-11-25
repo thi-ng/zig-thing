@@ -78,7 +78,7 @@ pub fn Vec(comptime SIZE: u32, comptime CTYPE: type) type {
             while (i < a.len) : (i += 1) {
                 res += a[i];
             }
-            return divN(res, @intToFloat(T, a.len));
+            return divN(res, @as(T, @floatFromInt(a.len)));
         }
 
         pub fn clamp(a: V, b: V, c: V) V {
@@ -106,7 +106,7 @@ pub fn Vec(comptime SIZE: u32, comptime CTYPE: type) type {
         }
 
         pub fn fill(buf: []V, val: V) void {
-            for (buf) |_, i| {
+            for (buf, 0..) |_, i| {
                 buf[i] = val;
             }
         }
@@ -144,7 +144,7 @@ pub fn Vec(comptime SIZE: u32, comptime CTYPE: type) type {
         }
 
         pub inline fn of(n: T) V {
-            return @splat(SIZE, n);
+            return @splat(n);
         }
 
         pub inline fn product(a: V) T {
@@ -180,7 +180,7 @@ fn VecTypeSpecific(comptime SIZE: u32, comptime T: type) type {
         pub fn eqDelta(a: V, b: V, eps: T) @Vector(SIZE, bool) {
             const delta = a - b;
             const invDelta = -delta;
-            return @select(T, delta > invDelta, delta, invDelta) <= @splat(SIZE, eps);
+            return @select(T, delta > invDelta, delta, invDelta) <= @as(V, @splat(eps));
         }
     };
     if (INFO == .Int) {
@@ -190,7 +190,7 @@ fn VecTypeSpecific(comptime SIZE: u32, comptime T: type) type {
                 const isFloat = @typeInfo(S) == .Float;
                 var res: [SIZE]T = undefined;
                 inline while (i < SIZE) : (i += 1) {
-                    res[i] = if (isFloat) @floatToInt(T, a[i]) else @intCast(T, a[i]);
+                    res[i] = if (isFloat) @as(T, @intFromFloat(a[i])) else @as(T, @intCast(a[i]));
                 }
                 return res;
             }
@@ -220,28 +220,28 @@ fn VecTypeSpecific(comptime SIZE: u32, comptime T: type) type {
             pub usingnamespace eqd;
 
             /// Vector w/ all components as -1
-            pub const MINUS_ONE = @splat(SIZE, -1);
+            pub const MINUS_ONE: V = @splat(-1);
 
             pub inline fn abs(a: V) V {
-                return @select(T, a >= @splat(SIZE, 0), a, -a);
+                return @select(T, a >= @as(V, @splat(0)), a, -a);
             }
         } else base;
     } else {
         return struct {
             pub usingnamespace eqd;
 
-            pub const INF = @splat(SIZE, std.math.inf(T));
-            pub const NEG_INF = @splat(SIZE, -std.math.inf(T));
+            pub const INF: V = @splat(std.math.inf(T));
+            pub const NEG_INF: V = @splat(-std.math.inf(T));
 
             /// Vector w/ all components as -1
-            pub const MINUS_ONE = @splat(SIZE, -1);
+            pub const MINUS_ONE: V = @splat(-1);
 
             pub inline fn fromVec(comptime S: type, a: @Vector(SIZE, S)) V {
                 comptime var i = 0;
                 const isInt = @typeInfo(S) == .Int;
                 var res: [SIZE]T = undefined;
                 inline while (i < SIZE) : (i += 1) {
-                    res[i] = if (isInt) @intToFloat(T, a[i]) else @floatCast(T, a[i]);
+                    res[i] = if (isInt) @as(T, @floatFromInt(a[i])) else @as(T, @floatCast(a[i]));
                 }
                 return res;
             }
@@ -275,12 +275,12 @@ fn VecTypeSpecific(comptime SIZE: u32, comptime T: type) type {
             }
 
             pub inline fn center(a: V) V {
-                return a - @splat(SIZE, mean(a));
+                return a - @as(V, @splat(mean(a)));
             }
 
             pub inline fn clamp01(a: V) V {
-                const zero = _splat(SIZE, T, 0);
-                const one = _splat(SIZE, T, 1);
+                const zero: V = @splat(0);
+                const one: V = @splat(1);
                 const res = @select(T, a > zero, a, zero);
                 return @select(T, res < one, res, one);
             }
@@ -311,9 +311,9 @@ fn VecTypeSpecific(comptime SIZE: u32, comptime T: type) type {
 
             pub inline fn fitN(a: V, b: T, c: T, d: T, e: T) V {
                 return mix(
-                    @splat(SIZE, d),
-                    @splat(SIZE, e),
-                    (a - @splat(SIZE, b)) / @splat(SIZE, c - b),
+                    @splat(d),
+                    @splat(e),
+                    (a - @as(V, @splat(b))) / @as(V, @splat(c - b)),
                 );
             }
 
@@ -323,9 +323,9 @@ fn VecTypeSpecific(comptime SIZE: u32, comptime T: type) type {
 
             pub inline fn fitNClamped(a: V, b: T, c: T, d: T, e: T) V {
                 return mix(
-                    @splat(SIZE, d),
-                    @splat(SIZE, e),
-                    clamp01((a - @splat(SIZE, b)) / @splat(SIZE, c - b)),
+                    @splat(d),
+                    @splat(e),
+                    clamp01((a - @as(V, @splat(b))) / @as(V, @splat(c - b))),
                 );
             }
 
@@ -342,7 +342,7 @@ fn VecTypeSpecific(comptime SIZE: u32, comptime T: type) type {
             }
 
             pub inline fn invSqrt(a: V) V {
-                return _splat(SIZE, T, 1) / @sqrt(a);
+                return @as(V, @splat(1)) / @sqrt(a);
             }
 
             pub inline fn log(a: V) V {
@@ -370,7 +370,7 @@ fn VecTypeSpecific(comptime SIZE: u32, comptime T: type) type {
             }
 
             pub inline fn mixN(a: V, b: V, n: T) V {
-                return mix(a, b, @splat(SIZE, n));
+                return mix(a, b, @splat(n));
             }
 
             pub inline fn mod(a: V, b: V) V {
@@ -378,7 +378,7 @@ fn VecTypeSpecific(comptime SIZE: u32, comptime T: type) type {
             }
 
             pub inline fn modN(a: V, b: T) V {
-                return _map2(SIZE, T, a, @splat(SIZE, b), _mod, .{});
+                return _map2(SIZE, T, a, @splat(b), _mod, .{});
             }
 
             pub inline fn normalize(a: V) V {
@@ -387,7 +387,7 @@ fn VecTypeSpecific(comptime SIZE: u32, comptime T: type) type {
 
             pub inline fn normalizeTo(a: V, n: T) V {
                 const m = mag(a);
-                return if (m > 1e-6) a * @splat(SIZE, n / m) else a;
+                return if (m > 1e-6) a * @as(V, @splat(n / m)) else a;
             }
 
             pub inline fn pow(a: V, b: V) V {
@@ -399,16 +399,16 @@ fn VecTypeSpecific(comptime SIZE: u32, comptime T: type) type {
             }
 
             pub inline fn reflect(a: V, n: V) V {
-                return n * @splat(SIZE, -2 * _dot(T, a, n)) + a;
+                return n * @as(V, @splat(-2 * _dot(T, a, n))) + a;
             }
 
             pub inline fn refract(a: V, n: V, eta: T) V {
                 const d = _dot(T, a, n);
                 const k = 1.0 - eta * eta * (1.0 - d * d);
                 return if (k < 0)
-                    _splat(SIZE, T, 0)
+                    @splat(0)
                 else
-                    n * @splat(SIZE, -(eta * d + @sqrt(k))) + a * @splat(SIZE, eta);
+                    n * @as(V, @splat(-(eta * d + @sqrt(k)))) + a * @as(V, @splat(eta));
             }
 
             pub inline fn round(a: V) V {
@@ -429,7 +429,7 @@ fn VecTypeSpecific(comptime SIZE: u32, comptime T: type) type {
 
             pub inline fn smoothStep(e0: V, e1: V, a: V) V {
                 const x = clamp01((a - e0) / (e1 - e0));
-                return (_splat(SIZE, T, 3) - _splat(SIZE, T, 2) * x) * x * x;
+                return (@as(V, @splat(3)) - @as(V, @splat(3)) * x) * x * x;
             }
 
             pub inline fn sqrt(a: V) V {
@@ -439,7 +439,7 @@ fn VecTypeSpecific(comptime SIZE: u32, comptime T: type) type {
             pub inline fn standardize(a: V) V {
                 const c = center(a);
                 const d = sd(c);
-                return if (d > 0) c / @splat(SIZE, d) else c;
+                return if (d > 0) c / @as(V, @splat(d)) else c;
             }
 
             pub inline fn tan(a: V) V {
@@ -487,7 +487,7 @@ pub fn BVec(comptime SIZE: u32) type {
         }
 
         pub inline fn of(n: bool) V {
-            return @splat(SIZE, n);
+            return @splat(n);
         }
 
         pub inline fn select(mask: V, a: V, b: V) V {
@@ -625,10 +625,6 @@ fn _map2(comptime SIZE: u32, comptime T: type, a: @Vector(SIZE, T), b: @Vector(S
     return res;
 }
 
-inline fn _splat(comptime SIZE: u32, comptime T: type, n: T) @Vector(SIZE, T) {
-    return @splat(SIZE, n);
-}
-
 inline fn _dot(comptime T: type, a: anytype, b: anytype) T {
     return @reduce(.Add, a * b);
 }
@@ -643,7 +639,7 @@ fn _mod(a: anytype, b: anytype) @TypeOf(a) {
 
 fn _normalize(comptime T: type, a: anytype, n: anytype) @TypeOf(a) {
     const m = @sqrt(_dot(T, a, a));
-    return if (m > 1e-6) a * @splat(@typeInfo(@TypeOf(a)).Vector.len, n / m) else a;
+    return if (m > 1e-6) a * @as(@TypeOf(a), @splat(n / m)) else a;
 }
 
 fn _pow(a: anytype, b: anytype) @TypeOf(a) {

@@ -47,10 +47,10 @@ pub fn NDArray(comptime N: usize, comptime CTYPE: type) type {
                 };
                 switch (order) {
                     .Major => {
-                        for (iter.order) |_, i| iter.order[i] = @intCast(u8, N - 1 - i);
+                        for (iter.order, 0..) |_, i| iter.order[i] = @as(u8, @intCast(N - 1 - i));
                     },
                     .Minor => {
-                        for (iter.order) |_, i| iter.order[i] = @intCast(u8, i);
+                        for (iter.order, 0..) |_, i| iter.order[i] = @as(u8, @intCast(i));
                     },
                     .Stride => {
                         iter.order = parent.order;
@@ -62,7 +62,7 @@ pub fn NDArray(comptime N: usize, comptime CTYPE: type) type {
             pub fn next(self: *@This()) ?[N]u32 {
                 if (self.done) return null;
                 const res: [N]u32 = self.pos;
-                const lastUpdate = for (self.order) |o, i| {
+                const lastUpdate = for (self.order, 0..) |o, i| {
                     self.pos[o] = (self.pos[o] + 1) % self.parent.shape[o];
                     if (self.pos[o] != 0) break i;
                 } else N;
@@ -113,7 +113,7 @@ pub fn NDArray(comptime N: usize, comptime CTYPE: type) type {
             } else {
                 if (opts.allocator) |allocator| {
                     self.data = try allocator.alloc(T, self.len);
-                    @memset(@ptrCast([*]u8, self.data), 0, self.len * @sizeOf(T));
+                    @memset(self.data, 0);
                 } else {
                     return NDError.MissingAllocator;
                 }
@@ -134,7 +134,7 @@ pub fn NDArray(comptime N: usize, comptime CTYPE: type) type {
                 idx += self.stride[i] * pos[i];
                 i += 1;
             }
-            return @intCast(usize, idx);
+            return @as(usize, @intCast(idx));
         }
 
         pub fn positions(self: *const Self, opts: IterOpts) PositionIterator {
@@ -183,7 +183,7 @@ pub fn NDArray(comptime N: usize, comptime CTYPE: type) type {
             const K = N - 1;
             var newShape: [K]u32 = undefined;
             var j: usize = 0;
-            for (self.shape) |s, i| {
+            for (self.shape, 0..) |s, i| {
                 if (i != axis) {
                     newShape[j] = s;
                     j += 1;
@@ -252,7 +252,7 @@ pub fn NDArray(comptime N: usize, comptime CTYPE: type) type {
 
         pub fn hi(self: *const Self, pos: [N]?u32) !Self {
             var newShape: [N]u32 = undefined;
-            for (pos) |p, i| {
+            for (pos, 0..) |p, i| {
                 if (p) |q| {
                     if (q < 1 or q > self.shape[i]) return NDError.OutOfBounds;
                     newShape[i] = q;
@@ -272,7 +272,7 @@ pub fn NDArray(comptime N: usize, comptime CTYPE: type) type {
         pub fn lo(self: *const Self, pos: [N]?u32) !Self {
             var off = self.offset;
             var newShape: [N]u32 = undefined;
-            for (pos) |p, i| {
+            for (pos, 0..) |p, i| {
                 if (p) |q| {
                     if (q >= self.shape[i]) return NDError.OutOfBounds;
                     off += self.stride[i] * q;
@@ -310,7 +310,7 @@ pub fn NDArray(comptime N: usize, comptime CTYPE: type) type {
             var newStride: [K]isize = undefined;
             var off = self.offset;
             var j: usize = 0;
-            for (axes) |axis, i| {
+            for (axes, 0..) |axis, i| {
                 if (axis) |a| {
                     if (a >= self.shape[i]) return NDError.OutOfBounds;
                     off += self.stride[i] * a;
@@ -349,14 +349,14 @@ pub fn NDArray(comptime N: usize, comptime CTYPE: type) type {
             var newShape: [N]u32 = undefined;
             var newStride: [N]isize = undefined;
             var off = self.offset;
-            for (steps) |ss, i| {
+            for (steps, 0..) |ss, i| {
                 if (ss) |s| {
                     var t = s;
                     if (s < 0) {
                         off += self.stride[i] * (self.shape[i] - 1);
                         t = -s;
                     }
-                    newShape[i] = @divTrunc(self.shape[i], @intCast(u32, t));
+                    newShape[i] = @divTrunc(self.shape[i], @as(u32, @intCast(t)));
                     newStride[i] = self.stride[i] * s;
                 } else {
                     newShape[i] = self.shape[i];
@@ -375,7 +375,7 @@ pub fn NDArray(comptime N: usize, comptime CTYPE: type) type {
         pub fn transpose(self: *const Self, order: [N]u32) !Self {
             var newShape: [N]u32 = undefined;
             var newStride: [N]isize = undefined;
-            for (order) |o, i| {
+            for (order, 0..) |o, i| {
                 if (o >= N) return NDError.OutOfBounds;
                 newShape[i] = self.shape[o];
                 newStride[i] = self.stride[o];
@@ -409,10 +409,10 @@ pub fn NDArray(comptime N: usize, comptime CTYPE: type) type {
         fn shapeToStride(shape: [N]u32) [N]isize {
             var stride = [_]isize{0} ** N;
             var s: isize = 1;
-            for (shape) |_, i| {
+            for (shape, 0..) |_, i| {
                 const j = N - 1 - i;
                 stride[j] = s;
-                s *= @intCast(isize, shape[j]);
+                s *= @as(isize, @intCast(shape[j]));
             }
             return stride;
         }
@@ -421,7 +421,7 @@ pub fn NDArray(comptime N: usize, comptime CTYPE: type) type {
             const Item = struct { s: isize, i: usize };
             var res: [N]u8 = undefined;
             var indexed: [N]Item = undefined;
-            for (indexed) |_, i| {
+            for (indexed, 0..) |_, i| {
                 indexed[i] = .{ .s = stride[i], .i = i };
             }
             const cmp = struct {
@@ -430,9 +430,9 @@ pub fn NDArray(comptime N: usize, comptime CTYPE: type) type {
                 }
             };
 
-            std.sort.sort(Item, indexed[0..], {}, cmp.inner);
-            for (indexed) |x, i| {
-                res[i] = @intCast(u8, x.i);
+            std.sort.insertion(Item, indexed[0..], {}, cmp.inner);
+            for (indexed, 0..) |x, i| {
+                res[i] = @as(u8, @intCast(x.i));
             }
             return res;
         }
