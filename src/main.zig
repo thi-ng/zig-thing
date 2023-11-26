@@ -1,4 +1,4 @@
-pub const DualList = @import("dual-list.zig").DualList;
+pub const FixedBufferDualList = @import("dual-list.zig").FixedBufferDualList;
 
 pub const ndarray = @import("ndarray.zig");
 pub const random = @import("random.zig");
