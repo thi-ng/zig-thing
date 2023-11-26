@@ -1,13 +1,18 @@
 const std = @import("std");
 const testing = std.testing;
 
-/// Fixed size managed buffer which stores two separate linked lists / of
-/// integer IDs (e.g. resource identifiers). The first list stores / IDs
-/// currently in use, the other stores currently available IDs.
+/// Fixed size managed buffer which stores two separate implicitly linked
+/// lists of integer IDs (e.g. resource identifiers) in the same space.
+/// Only uses N+2 ints of configured type. No extra space needed for links
+/// between cells. The first list stores IDs currently in use, the other
+/// stores currently available IDs.
 ///
 /// Any unsigned int type is supported for IDs. The max. list capacity
 /// depends on that chosen type (e.g. 255 for `u8`, 65535 for `u16`...)
-pub fn DualList(comptime SIZE: u16, comptime T: type) type {
+///
+/// Structural diagram:
+/// https://mastodon.thi.ng/@toxi/111449052682849612
+pub fn FixedBufferDualList(comptime SIZE: u16, comptime T: type) type {
     const info = @typeInfo(T);
     if (!(info == .Int and info.Int.signedness == .unsigned)) {
         @compileError("unsupported type: expected an uint, but got: " ++ @typeName(T));
@@ -22,6 +27,7 @@ pub fn DualList(comptime SIZE: u16, comptime T: type) type {
         available: T = 0,
         slots: [SIZE]T = undefined,
 
+        /// Sentinel value used to mark the end of a list
         pub const SENTINEL = sentinel;
 
         const Self = @This();
@@ -38,12 +44,14 @@ pub fn DualList(comptime SIZE: u16, comptime T: type) type {
             }
         };
 
+        /// Returns a new, fully initialized instance (see `init()`)
         pub fn new() Self {
             var inst = Self{};
             inst.init();
             return inst;
         }
 
+        /// Initializes (or resets) both lists and marks all IDs as available
         pub fn init(self: *Self) void {
             self.active = SENTINEL;
             self.available = 0;
@@ -52,6 +60,8 @@ pub fn DualList(comptime SIZE: u16, comptime T: type) type {
             }
         }
 
+        /// Attempts to mark the next available ID as active and if
+        /// successful returns it, otherwise returns null (O(1) op).
         pub fn alloc(self: *Self) ?T {
             const nextID = self.available;
             if (nextID == SENTINEL) return null;
@@ -61,6 +71,8 @@ pub fn DualList(comptime SIZE: u16, comptime T: type) type {
             return nextID;
         }
 
+        /// Attempts to mark the given ID as free/available again
+        /// and returns true if successful (O(n) op).
         pub fn free(self: *Self, id: T) bool {
             if (id >= SIZE) return false;
             var prev: *T = &self.active;
@@ -80,10 +92,13 @@ pub fn DualList(comptime SIZE: u16, comptime T: type) type {
             }
         }
 
+        /// Returns an iterator of all currently active IDs
         pub fn iterateActive(self: *Self) Iterator {
             return Iterator{ .parent = self, .curr = &self.active };
         }
 
+        /// Returns an iterator of all currently free/available IDs (only useful
+        /// for debugging, user code should only need `iterateActive()`)
         pub fn iterateFree(self: *Self) Iterator {
             return Iterator{ .parent = self, .curr = &self.available };
         }
@@ -91,7 +106,7 @@ pub fn DualList(comptime SIZE: u16, comptime T: type) type {
 }
 
 test "DualList" {
-    const ListU8 = DualList(4, u8);
+    const ListU8 = FixedBufferDualList(4, u8);
     var list = ListU8.new();
     try testing.expectEqualDeep(
         list,
