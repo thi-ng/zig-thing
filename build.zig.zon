@@ -1,5 +1,5 @@
 .{
-    .name = "thing",
+    .name = "thi.ng",
     .version = "0.0.1",
     .paths = .{
         "src",
