@@ -65,6 +65,17 @@ With these changes, you can then import the module in your source code like so:
 const thing = @import("thi.ng");
 ```
 
+## Building & Testing
+
+The package is not meant to be build directly (yet), so currently the build file
+only declares a module.
+
+To run all tests:
+
+```bash
+zig test src/main.zig
+```
+
 ## License
 
 &copy; 2021 - 2023 Karsten Schmidt // Apache Software License 2.0
