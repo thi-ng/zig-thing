@@ -97,7 +97,7 @@ pub fn FixedBufferDualList(comptime SIZE: u16, comptime T: type) type {
             var nextID = self.active;
             while (true) {
                 if (nextID == SENTINEL) return false;
-                var curr = &self.slots[nextID];
+                const curr = &self.slots[nextID];
                 if (nextID == id) {
                     nextID = curr.*;
                     prev.* = nextID;

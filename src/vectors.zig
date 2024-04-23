@@ -247,7 +247,7 @@ fn VecTypeSpecific(comptime SIZE: u32, comptime T: type) type {
             }
 
             pub inline fn abs(a: V) V {
-                return @fabs(a);
+                return @abs(a);
             }
 
             pub inline fn acos(a: V) V {
@@ -606,21 +606,19 @@ fn isSignedInt(comptime a: type) bool {
 }
 
 fn _map(comptime SIZE: u32, comptime T: type, a: @Vector(SIZE, T), comptime f: anytype, args: anytype) @TypeOf(a) {
-    comptime var opts: std.builtin.CallOptions = .{};
     comptime var i = 0;
     var res: [SIZE]T = undefined;
     inline while (i < SIZE) : (i += 1) {
-        res[i] = @call(opts, f, .{a[i]} ++ args);
+        res[i] = @call(.{}, f, .{a[i]} ++ args);
     }
     return res;
 }
 
 fn _map2(comptime SIZE: u32, comptime T: type, a: @Vector(SIZE, T), b: @Vector(SIZE, T), comptime f: anytype, args: anytype) @TypeOf(a) {
-    comptime var opts: std.builtin.CallOptions = .{};
     comptime var i = 0;
     var res: [SIZE]T = undefined;
     inline while (i < SIZE) : (i += 1) {
-        res[i] = @call(opts, f, .{ a[i], b[i] } ++ args);
+        res[i] = @call(.{}, f, .{ a[i], b[i] } ++ args);
     }
     return res;
 }

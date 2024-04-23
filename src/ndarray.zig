@@ -189,7 +189,7 @@ pub fn NDArray(comptime N: usize, comptime CTYPE: type) type {
                     j += 1;
                 }
             }
-            var acc = try NDArray(K, T).init(.{
+            const acc = try NDArray(K, T).init(.{
                 .shape = newShape,
                 .allocator = self.allocator,
             });
@@ -523,7 +523,7 @@ test "nd3 f32 iter" {
 
     try std.testing.expect(a.eqApprox(&a, 1e-9));
 
-    var p = try a.toOwnedSlice(.{ .allocator = __allocator });
+    const p = try a.toOwnedSlice(.{ .allocator = __allocator });
     defer __allocator.free(p);
     std.debug.print("{d}\n", .{p});
     var i = a.values(.{});
@@ -555,7 +555,7 @@ test "2d trunc" {
     b = try b.lo(.{ 1, 2 });
     b = try b.hi(.{ 2, 2 });
     std.debug.print("{d}", .{b.shape});
-    var c = try b.toOwnedSlice(.{ .allocator = __allocator });
+    const c = try b.toOwnedSlice(.{ .allocator = __allocator });
     defer __allocator.free(c);
     std.debug.print("{d}\n", .{c});
 }
@@ -566,7 +566,7 @@ test "3d -> 2d pick" {
     var b = try a.reshape(3, .{ .shape = .{ 4, 4, 4 } });
     var c = try b.pick(2, .{ 1, null, 1 });
     c.print();
-    var d = try c.toOwnedSlice(.{ .allocator = __allocator });
+    const d = try c.toOwnedSlice(.{ .allocator = __allocator });
     defer __allocator.free(d);
     std.debug.print("{d}\n", .{d});
 }
@@ -585,7 +585,7 @@ test "3d step" {
     // var b2 = try a2.reshape(3, .{ .shape = .{ 4, 2, 4 } });
     var c = try b.step(.{ 2, -2, -1 });
     c.print();
-    var d = try c.toOwnedSlice(.{ .allocator = __allocator });
+    const d = try c.toOwnedSlice(.{ .allocator = __allocator });
     defer __allocator.free(d);
     std.debug.print("{d}\n", .{d});
 }
@@ -602,7 +602,7 @@ test "3d axis iter" {
     var c = try b.pick(1, .{ 0, null, null });
     c.print();
     std.debug.print("sum {d}\n", .{c.sum()});
-    var d = try c.toOwnedSlice(.{ .allocator = __allocator });
+    const d = try c.toOwnedSlice(.{ .allocator = __allocator });
     defer __allocator.free(d);
     std.debug.print("{d}\n", .{d});
 }
