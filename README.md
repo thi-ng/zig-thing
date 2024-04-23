@@ -6,6 +6,8 @@ Various, still somewhat unstructured, raw-around-the-edges utilities / open
 learning with [Zig](https://ziglang.org), at some point hopefully culminating
 into a useful toolkit.
 
+**All code in this repo is compatible with Zig v0.12.0**
+
 ## Current modules (all WIP)
 
 | Name                                               | Description                                                                 |
@@ -78,4 +80,4 @@ zig test src/main.zig
 
 ## License
 
-&copy; 2021 - 2023 Karsten Schmidt // Apache Software License 2.0
+&copy; 2021 - 2024 Karsten Schmidt // Apache Software License 2.0
