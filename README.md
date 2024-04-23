@@ -29,8 +29,8 @@ then build again...
 .{
     .dependencies = .{
         .@"thi.ng" = .{
-            .url = "https://github.com/thi-ng/zig-thing/archive/9d65d72d518d477dafd0a2940b77d5e382b446ae.tar.gz",
-            .hash = "1220351027b1adc043a204c25550e8196ced2e5b02eab27c89893fa6fe6042923269",
+            .url = "https://github.com/thi-ng/zig-thing/archive/fa93bddf035c32b30c910678743b3c0f8065b479.tar.gz",
+            .hash = "12209054cb0ca8d7f2478e1f2a66bd2921e4e41a0448dbaa72ad5cbe9e2c1c57b5d1",
         },
     },
 }
