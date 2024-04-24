@@ -19,24 +19,15 @@ into a useful toolkit.
 
 ## Usage with Zig's package manager
 
-There are no releases of this project available yet, you can refer to a certain
-commit and add something like below to your `build.zig.zon` file.
+Tagged versions of this project are available and can be added as dependency to
+your project via `zig fetch`, like so:
 
-**Important:** If you're choosing a different (newer) commit, do **omit** the
-`.hash` line! `zig build` will first throw an error, but also display the
-expected multihash value, which you can paste into the `build.zig.zon` file and
-then build again...
-
-```zig
-.{
-    .dependencies = .{
-        .@"thi.ng" = .{
-            .url = "https://github.com/thi-ng/zig-thing/archive/fa93bddf035c32b30c910678743b3c0f8065b479.tar.gz",
-            .hash = "12209054cb0ca8d7f2478e1f2a66bd2921e4e41a0448dbaa72ad5cbe9e2c1c57b5d1",
-        },
-    },
-}
+```bash
+zig fetch --save https://github.com/thi-ng/zig-thing/archive/refs/tags/v0.0.3.tar.gz
 ```
+
+The `--save` option adds a new dependency called `thi.ng` to your
+`build.zig.zon` project file.
 
 You'll also need to update your main `build.zig` with these additions:
 
@@ -48,18 +39,19 @@ const optimize = b.standardOptimizeOption(.{});
 const exe = b.addExecutable(.{ ... });
 // </standard_boilerplate>
 
-// actual additions...
-
 // declare & configure dependency (via build.zig.zon)
-const thing = b.dependency("thi.ng", .{}).module("thi.ng");
+const thing = b.dependency("thi.ng", .{
+    .target = target,
+    .optimize = optimize,
+}).module("thi.ng");
 
 // declare module for importing via given id
-exe.addModule("thi.ng", thing);
+exe.root_module.addImport("thi.ng", thing);
 ```
 
 **Important:** If you're having a test build step configured (or any other build
-step requiring separate compilation), you'll also need to add the `.addModule()`
-call for that step too!
+step requiring separate compilation), you'll also need to add the
+`.root_module.addImport()` call for that step too!
 
 With these changes, you can then import the module in your source code like so:
 
