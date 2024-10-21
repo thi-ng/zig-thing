@@ -1,6 +1,11 @@
 const std = @import("std");
 const testing = std.testing;
 
+const DualListError = error{
+    OutOfMemory,
+    InvalidID,
+};
+
 /// Fixed size managed buffer which stores two separate implicitly linked
 /// lists of integer IDs (e.g. resource identifiers) in the same space.
 /// Only uses N+2 ints of configured type. No extra space needed for links
@@ -12,7 +17,7 @@ const testing = std.testing;
 ///
 /// Structural diagram:
 /// https://mastodon.thi.ng/@toxi/111449052682849612
-pub fn FixedBufferDualList(comptime SIZE: u16, comptime T: type) type {
+pub fn FixedBufferDualList(comptime SIZE: usize, comptime T: type) type {
     const info = @typeInfo(T);
     if (!(info == .Int and info.Int.signedness == .unsigned)) {
         @compileError("unsupported type: expected an uint, but got: " ++ @typeName(T));
@@ -20,7 +25,7 @@ pub fn FixedBufferDualList(comptime SIZE: u16, comptime T: type) type {
     const sentinel = std.math.maxInt(T);
     if (SIZE > sentinel) {
         var buf: [64]u8 = undefined;
-        @compileError(std.fmt.bufPrint(&buf, "unsupported size: {d} (max allowed {d})", .{ SIZE, sentinel }) catch "");
+        @compileError(try std.fmt.bufPrint(&buf, "unsupported size: {d} (max allowed {d})", .{ SIZE, sentinel }));
     }
     return extern struct {
         active: T = SENTINEL,
@@ -78,32 +83,44 @@ pub fn FixedBufferDualList(comptime SIZE: u16, comptime T: type) type {
             }
         }
 
-        /// Attempts to mark the next available ID as active and if
-        /// successful returns it, otherwise returns null (O(1) op).
-        pub fn alloc(self: *Self) ?T {
+        /// Creates and returns a copy of the given instance. This can be useful
+        /// for some types of iterator processing, where the iterator reads from
+        /// a copy and the / original list will be mutated (by freeing/allocating
+        /// values).
+        pub fn copy(self: *Self) Self {
+            var inst = Self{};
+            inst.active = self.active;
+            inst.available = self.available;
+            inst.slots = self.slots;
+            return inst;
+        }
+
+        /// Attempts to mark the next available ID as active (O(1) op) and if
+        /// successful returns it. Otherwise returns an error.
+        pub fn alloc(self: *Self) DualListError!T {
             const nextID = self.available;
-            if (nextID == SENTINEL) return null;
+            if (nextID == SENTINEL) return DualListError.OutOfMemory;
             self.available = self.slots[nextID];
             self.slots[nextID] = self.active;
             self.active = nextID;
             return nextID;
         }
 
-        /// Attempts to mark the given ID as free/available again
-        /// and returns true if successful (O(n) op).
-        pub fn free(self: *Self, id: T) bool {
-            if (id >= SIZE) return false;
+        /// Attempts to mark the given ID as free/available again (O(n) op).
+        /// Returns an error if ID is invalid or already freed.
+        pub fn free(self: *Self, id: T) DualListError!void {
+            if (id >= SIZE) return DualListError.InvalidID;
             var prev: *T = &self.active;
             var nextID = self.active;
             while (true) {
-                if (nextID == SENTINEL) return false;
+                if (nextID == SENTINEL) return DualListError.InvalidID;
                 const curr = &self.slots[nextID];
                 if (nextID == id) {
                     nextID = curr.*;
                     prev.* = nextID;
                     curr.* = self.available;
                     self.available = id;
-                    return true;
+                    return;
                 }
                 prev = curr;
                 nextID = self.slots[nextID];
@@ -124,37 +141,37 @@ test "FixedBufferDualList" {
         list,
         ListU8{ .active = 255, .available = 0, .slots = [4]u8{ 1, 2, 3, 255 } },
     );
-    try testing.expect(list.alloc() == 0);
-    try testing.expect(list.alloc() == 1);
-    try testing.expect(list.alloc() == 2);
+    try testing.expect(try list.alloc() == 0);
+    try testing.expect(try list.alloc() == 1);
+    try testing.expect(try list.alloc() == 2);
     var iter = list.iterator();
     while (iter.next()) |i| {
         std.debug.print("active: {d}\n", .{i});
     }
-    try testing.expect(!list.free(100));
-    try testing.expect(list.free(0));
-    try testing.expect(!list.free(0));
-    try testing.expect(list.free(2));
-    try testing.expect(!list.free(2));
-    try testing.expect(list.free(1));
-    try testing.expect(!list.free(1));
+    try testing.expectError(DualListError.InvalidID, list.free(100));
+    try list.free(0);
+    try testing.expectError(DualListError.InvalidID, list.free(0));
+    try list.free(2);
+    try testing.expectError(DualListError.InvalidID, list.free(2));
+    try list.free(1);
+    try testing.expectError(DualListError.InvalidID, list.free(1));
     try testing.expectEqualDeep(
         list,
         ListU8{ .active = 255, .available = 1, .slots = [4]u8{ 3, 2, 0, 255 } },
     );
-    try testing.expect(list.alloc() == 1);
-    try testing.expect(list.alloc() == 2);
-    try testing.expect(list.alloc() == 0);
-    try testing.expect(list.alloc() == 3);
-    try testing.expect(list.alloc() == null);
+    try testing.expect(try list.alloc() == 1);
+    try testing.expect(try list.alloc() == 2);
+    try testing.expect(try list.alloc() == 0);
+    try testing.expect(try list.alloc() == 3);
+    try testing.expectError(DualListError.OutOfMemory, list.alloc());
 }
 
 test "FixedBufferDualList.iterator() basic" {
     const ListU8 = FixedBufferDualList(4, u8);
     var list = ListU8.new();
-    try testing.expect(list.alloc() == 0);
-    try testing.expect(list.alloc() == 1);
-    try testing.expect(list.alloc() == 2);
+    try testing.expect(try list.alloc() == 0);
+    try testing.expect(try list.alloc() == 1);
+    try testing.expect(try list.alloc() == 2);
     var iter = list.iterator();
     try testing.expect(iter.next() == 2);
     try testing.expect(iter.next() == 1);
@@ -165,13 +182,13 @@ test "FixedBufferDualList.iterator() basic" {
 test "iterator alloc post creation" {
     const ListU8 = FixedBufferDualList(4, u8);
     var list = ListU8.new();
-    try testing.expect(list.alloc() == 0);
-    try testing.expect(list.alloc() == 1);
+    try testing.expect(try list.alloc() == 0);
+    try testing.expect(try list.alloc() == 1);
     var iter = list.iterator();
-    try testing.expect(list.alloc() == 2);
+    try testing.expect(try list.alloc() == 2);
     try testing.expect(iter.next() == 2);
     // alloc after 1st iter.next() will NOT be seen by iter
-    try testing.expect(list.alloc() == 3);
+    try testing.expect(try list.alloc() == 3);
     try testing.expect(iter.next() == 1);
 
     // new iterator
@@ -184,22 +201,22 @@ test "iterator alloc post creation" {
 test "iterator free" {
     const ListU8 = FixedBufferDualList(4, u8);
     var list = ListU8.new();
-    try testing.expect(list.alloc() == 0);
-    try testing.expect(list.alloc() == 1);
-    try testing.expect(list.alloc() == 2);
-    try testing.expect(list.alloc() == 3);
+    try testing.expect(try list.alloc() == 0);
+    try testing.expect(try list.alloc() == 1);
+    try testing.expect(try list.alloc() == 2);
+    try testing.expect(try list.alloc() == 3);
 
     var iter = list.iterator();
-    try testing.expect(list.free(3));
+    try list.free(3);
     try testing.expect(iter.next() == 2);
-    try testing.expect(list.free(2));
+    try list.free(2);
     try testing.expect(iter.next() == 1);
-    try testing.expect(list.free(1));
+    try list.free(1);
     try testing.expect(iter.next() == 0);
-    try testing.expect(list.free(0));
-    try testing.expect(list.alloc() == 0);
+    try list.free(0);
+    try testing.expect(try list.alloc() == 0);
     try testing.expect(iter.next() == null);
-    try testing.expect(list.alloc() == 1);
+    try testing.expect(try list.alloc() == 1);
     try testing.expect(iter.next() == null);
 }
 
@@ -210,6 +227,16 @@ test "iterator empty" {
     try testing.expect(iter.next() == null);
     // once end has been reached, new allocs must not impact iterator
     // checking a special case here since list is empty so next() call is different
-    try testing.expect(list.alloc() == 0);
+    try testing.expect(try list.alloc() == 0);
     try testing.expect(iter.next() == null);
+}
+
+test "copy" {
+    const ListU8 = FixedBufferDualList(4, u8);
+    var list = ListU8.new();
+    try testing.expect(try list.alloc() == 0);
+    try testing.expect(try list.alloc() == 1);
+    var list2 = list.copy();
+    try testing.expect(try list.alloc() == 2);
+    try testing.expect(try list2.alloc() == 2);
 }
