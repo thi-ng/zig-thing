@@ -12,7 +12,7 @@ into a useful toolkit.
 
 | Name                                               | Description                                                                 |
 | -------------------------------------------------- | --------------------------------------------------------------------------- |
-| [`thing.FixedBufferDualList`](./src/dual-list.zig) | Dual-headed linked list for resource IDs allocation (active/available)      |
+| [`thing.FixedBufferDualList`](./src/dual_list.zig) | Dual-headed linked list for resource IDs allocation (active/available)      |
 | [`thing.ndarray`](./src/ndarray.zig)               | Generic nD-Array base implementation                                        |
 | [`thing.random`](./src/random.zig)                 | Additional `std.rand.Random`-compatible PRNGs and related utilities.        |
 | [`thing.vectors`](./doc/vectors.md)                | SIMD-based generic vector type & operations (incl. type specific additions) |
