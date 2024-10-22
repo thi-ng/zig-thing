@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 pub const FixedBufferDualList = @import("dual_list.zig").FixedBufferDualList;
 
 pub const ndarray = @import("ndarray.zig");

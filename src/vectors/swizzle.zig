@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // const @Vector = @import("std").meta.@Vector;
 
 // codegen (NodeJS):

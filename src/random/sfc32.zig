@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 //! Ported from:
 //! https://github.com/thi-ng/umbrella/blob/develop/packages/random/src/sfc32.ts
 //!
