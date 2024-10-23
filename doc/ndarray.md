@@ -1,8 +1,4 @@
-# thing.ndarray
-
-```zig
-const nd = @import("thing").ndarray;
-```
+# thi.ng.ndrray
 
 ## About
 
@@ -10,6 +6,8 @@ Generic nD-Array base implementation
 
 WIP
 
-## License
+## Example usage
 
-© 2021 - 2022 Karsten Schmidt // Apache License 2.0
+```zig
+const nd = @import("thing").ndarray;
+```
