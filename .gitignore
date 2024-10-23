@@ -1,3 +1,4 @@
-zig-*
 /dev
 /tmp
+.zig-cache
+zig-*
