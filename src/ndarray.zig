@@ -170,7 +170,7 @@ pub fn NDArray(comptime N: usize, comptime CTYPE: type) type {
 
         pub fn sum(self: *const Self) T {
             const info = @typeInfo(T);
-            if (!(info == .Int or info == .Float)) @compileError("only supported for int/float types");
+            if (!(info == .int or info == .float)) @compileError("only supported for int/float types");
             var acc: T = 0;
             var iter = self.values(.{});
             while (true) {
@@ -238,7 +238,7 @@ pub fn NDArray(comptime N: usize, comptime CTYPE: type) type {
         }
 
         pub fn eqApprox(self: *const Self, other: *const Self, tolerance: T) bool {
-            if (@typeInfo(T) != .Float) @compileError("only supported for float types");
+            if (@typeInfo(T) != .float) @compileError("only supported for float types");
             if (!std.mem.eql(u32, self.shape[0..], other.shape[0..])) return false;
             var ia = self.values(.{});
             var ib = other.values(.{});
@@ -447,7 +447,7 @@ fn iabs(x: isize) isize {
 
 pub fn range(n: u32, comptime T: type, allocator: *const Allocator) !NDArray(1, T) {
     const info = @typeInfo(T);
-    if (!(info == .Int or info == .Float)) @compileError("only int or float types supported");
+    if (!(info == .int or info == .float)) @compileError("only int or float types supported");
     var res = try NDArray(1, T).init(.{
         .allocator = allocator,
         .shape = .{n},

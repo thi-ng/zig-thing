@@ -23,10 +23,10 @@ Tagged versions of this project are available and can be added as dependency to
 your project via `zig fetch`, like so:
 
 ```bash
-zig fetch --save https://github.com/thi-ng/zig-thing/archive/refs/tags/v0.1.0.tar.gz
+zig fetch --save https://github.com/thi-ng/zig-thing/archive/refs/tags/v0.1.1.tar.gz
 ```
 
-The `--save` option adds a new dependency called `thi.ng` to your
+The `--save` option adds a new dependency called `thing` to your
 `build.zig.zon` project file.
 
 You'll also need to update your main `build.zig` with these additions:
@@ -40,13 +40,13 @@ const exe = b.addExecutable(.{ ... });
 // </standard_boilerplate>
 
 // declare & configure dependency (via build.zig.zon)
-const thing = b.dependency("thi.ng", .{
+const thing = b.dependency("thing", .{
     .target = target,
     .optimize = optimize,
-}).module("thi.ng");
+}).module("thing");
 
 // declare module for importing via given id
-exe.root_module.addImport("thi.ng", thing);
+exe.root_module.addImport("thing", thing);
 ```
 
 **Important:** If you're having a test build step configured (or any other build
@@ -56,7 +56,7 @@ step requiring separate compilation), you'll also need to add the
 With these changes, you can then import the module in your source code like so:
 
 ```zig
-const thing = @import("thi.ng");
+const thing = @import("thing");
 ```
 
 ## Building & Testing

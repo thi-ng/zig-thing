@@ -13,7 +13,7 @@ const swizzles = @import("vectors/swizzle.zig");
 /// their integer-based counterparts)
 pub fn Vec(comptime SIZE: u32, comptime CTYPE: type) type {
     const INFO = @typeInfo(CTYPE);
-    if (!(INFO == .Int or INFO == .Float)) {
+    if (!(INFO == .int or INFO == .float)) {
         @compileError("unsupported component type: " ++ CTYPE);
     }
     if (SIZE < 1) {
@@ -92,7 +92,7 @@ pub fn Vec(comptime SIZE: u32, comptime CTYPE: type) type {
         }
 
         pub inline fn divN(a: V, n: T) V {
-            return if (INFO == .Int) @divTrunc(a, of(n)) else a / of(n);
+            return if (INFO == .int) @divTrunc(a, of(n)) else a / of(n);
         }
 
         pub inline fn dot(a: V, b: V) T {
@@ -185,11 +185,11 @@ fn VecTypeSpecific(comptime SIZE: u32, comptime T: type) type {
             return @select(T, delta > invDelta, delta, invDelta) <= @as(V, @splat(eps));
         }
     };
-    if (INFO == .Int) {
+    if (INFO == .int) {
         const base = struct {
             pub fn fromVec(comptime S: type, a: @Vector(SIZE, S)) V {
                 comptime var i = 0;
-                const isFloat = @typeInfo(S) == .Float;
+                const isFloat = @typeInfo(S) == .float;
                 var res: [SIZE]T = undefined;
                 inline while (i < SIZE) : (i += 1) {
                     res[i] = if (isFloat) @as(T, @intFromFloat(a[i])) else @as(T, @intCast(a[i]));
@@ -240,7 +240,7 @@ fn VecTypeSpecific(comptime SIZE: u32, comptime T: type) type {
 
             pub inline fn fromVec(comptime S: type, a: @Vector(SIZE, S)) V {
                 comptime var i = 0;
-                const isInt = @typeInfo(S) == .Int;
+                const isInt = @typeInfo(S) == .int;
                 var res: [SIZE]T = undefined;
                 inline while (i < SIZE) : (i += 1) {
                     res[i] = if (isInt) @as(T, @floatFromInt(a[i])) else @as(T, @floatCast(a[i]));
@@ -501,7 +501,7 @@ pub fn BVec(comptime SIZE: u32) type {
 fn VecSizeSpecific(comptime SIZE: u32, comptime T: type) type {
     const V = @Vector(SIZE, T);
     const INFO = @typeInfo(T);
-    const isFloat = INFO == .Float;
+    const isFloat = INFO == .float;
     if (SIZE == 2) {
         const base = if (isFloat or isSignedInt(T)) struct {
             pub fn perpendicularCCW(a: V) V {
@@ -604,7 +604,7 @@ fn VecSizeSpecific(comptime SIZE: u32, comptime T: type) type {
 
 fn isSignedInt(comptime a: type) bool {
     const info = @typeInfo(a);
-    return info == .Int and info.Int.signedness == std.builtin.Signedness.signed;
+    return info == .int and info.int.signedness == std.builtin.Signedness.signed;
 }
 
 fn _map(comptime SIZE: u32, comptime T: type, a: @Vector(SIZE, T), comptime f: anytype, args: anytype) @TypeOf(a) {

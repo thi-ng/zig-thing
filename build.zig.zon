@@ -1,7 +1,8 @@
 .{
-    .name = "thi.ng",
-    .version = "0.1.0",
-    .minimum_zig_version = "0.13.0",
+    .name = .thing,
+    .version = "0.1.1",
+    .minimum_zig_version = "0.14.0",
+    .fingerprint = 0x5b4c2c83314fb2b8,
     .paths = .{
         "src",
         "build.zig",

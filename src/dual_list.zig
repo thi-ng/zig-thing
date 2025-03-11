@@ -21,7 +21,7 @@ const DualListError = error{
 /// https://mastodon.thi.ng/@toxi/111449052682849612
 pub fn FixedBufferDualList(comptime SIZE: usize, comptime T: type) type {
     const info = @typeInfo(T);
-    if (!(info == .Int and info.Int.signedness == .unsigned)) {
+    if (!(info == .int and info.int.signedness == .unsigned)) {
         @compileError("unsupported type: expected an uint, but got: " ++ @typeName(T));
     }
     const sentinel = std.math.maxInt(T);

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 const std = @import("std");
-const Random = std.rand.Random;
+const Random = std.Random;
 
 pub const Sfc32 = @import("random/sfc32.zig");
 
