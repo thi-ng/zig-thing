@@ -1,4 +1,5 @@
 const std = @import("std");
+const Allocator = std.mem.Allocator;
 
 const H1 = 0xcc9e2d51;
 const H2 = 0xe6546b64;
@@ -9,7 +10,7 @@ pub fn HashGrid2(comptime TYPE: type) type {
         @compileError("require float type");
     }
     return struct {
-        allocator: *const std.mem.Allocator,
+        allocator: *const Allocator,
         indices: []u32,
         entries: []u32,
         tableSize: u32,
@@ -19,7 +20,7 @@ pub fn HashGrid2(comptime TYPE: type) type {
 
         /// Returns a new grid instance pre-initialized using provided allocator.
         /// The allocator is stored in the struct.
-        pub fn init(cellSize: TYPE, capacity: u32, allocator: *const std.mem.Allocator) !Self {
+        pub fn init(cellSize: TYPE, capacity: u32, allocator: *const Allocator) !Self {
             const size = capacity << 1;
             return Self{
                 .allocator = allocator,
@@ -30,7 +31,8 @@ pub fn HashGrid2(comptime TYPE: type) type {
             };
         }
 
-        pub fn free(self: *Self) void {
+        /// De-initializes grid and frees all internal buffers (using stored allocator)
+        pub fn deinit(self: *Self) void {
             self.allocator.free(self.indices);
             self.allocator.free(self.entries);
         }
@@ -109,7 +111,7 @@ const __allocator = &std.testing.allocator;
 
 test "HashGrid2" {
     var grid = try HashGrid2(f32).init(2, 16, __allocator);
-    defer grid.free();
+    defer grid.deinit();
 
     std.debug.assert(grid.cellSize == 2.0);
     std.debug.assert(grid.indices.len == 33);
@@ -121,7 +123,7 @@ test "HashGrid2" {
         [_]f32{ 5, 6 },
         [_]f32{ 7, 8 },
     });
-    // std.debug.print("{}\n", .{grid});
+    std.debug.print("{}\n", .{grid});
 
     var ids = [_]u32{0} ** 8;
     const results = grid.query(&[_]f32{ 1, 2 }, 3, &ids);
