@@ -1,8 +1,8 @@
 .{
     .name = .thing,
-    .version = "0.2.0",
+    .version = "0.2.1",
     .minimum_zig_version = "0.14.0",
-    .fingerprint = 0x5b4c2c83dab535e7,
+    .fingerprint = 0x5b4c2c83120a051f,
     .paths = .{
         "src",
         "build.zig",
