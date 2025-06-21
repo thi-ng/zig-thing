@@ -40,3 +40,7 @@ pub fn pickWeighted(comptime T: type, rnd: *Random, opts: anytype, weights: []co
 pub fn chance(rnd: *Random, prob: f32) bool {
     return rnd.float(f32) < prob;
 }
+
+test {
+    std.testing.refAllDecls(@This());
+}
