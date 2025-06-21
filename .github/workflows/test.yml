@@ -1,0 +1,24 @@
+name: test-all
+permissions: {}
+on:
+    push:
+        branches:
+            - feature/*
+            - develop
+            - main
+        paths:
+            - "src/**"
+            - ".github/workflows/**"
+            - "!**.md"
+    pull_request:
+        branches:
+            - develop
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+            - uses: mlugg/setup-zig@7dccf5e6d09267c55f815f2db29495f30ba2ebca
+              with:
+                  version: 0.14.1
+            - run: zig test src/main.zig
