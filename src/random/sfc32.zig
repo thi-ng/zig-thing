@@ -61,6 +61,12 @@ pub fn fill(self: *Sfc32, buf: []u8) void {
     }
 }
 
-pub fn random(self: *Sfc32) std.rand.Random {
-    return std.rand.Random.init(self, fill);
+pub fn random(self: *Sfc32) std.Random {
+    return std.Random.init(self, fill);
+}
+
+test "SFC32" {
+    var inst = init(&.{ 0xdecafbad, 0xbadc0ffe, 0xd00dd44d, 0xea57be57 });
+    var rnd = random(&inst);
+    try std.testing.expectEqual(0x83feca02, rnd.int(u32));
 }
