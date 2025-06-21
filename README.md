@@ -24,7 +24,7 @@ Tagged versions of this project are available and can be added as dependency to
 your project via `zig fetch`, like so:
 
 ```bash
-zig fetch --save https://github.com/thi-ng/zig-thing/archive/refs/tags/v0.1.1.tar.gz
+zig fetch --save https://github.com/thi-ng/zig-thing/archive/refs/tags/v0.2.1.tar.gz
 ```
 
 The `--save` option adds a new dependency called `thing` to your
