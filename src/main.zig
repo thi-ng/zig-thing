@@ -8,6 +8,7 @@ pub const vectors = @import("vectors.zig");
 
 test {
     _ = @import("dual_list.zig");
+    _ = @import("hash_grid.zig");
     _ = @import("ndarray.zig");
     _ = @import("random.zig");
     _ = @import("vectors.zig");
