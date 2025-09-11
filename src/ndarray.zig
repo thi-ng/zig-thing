@@ -392,7 +392,7 @@ pub fn NDArray(comptime N: usize, comptime CTYPE: type) type {
         }
 
         pub fn print(self: *const Self) void {
-            std.debug.print("NDArray({},{})[shape={d} stride={d} offset={d} len={d}]\n", .{
+            std.debug.print("NDArray({},{})[shape={any} stride={any} offset={d} len={d}]\n", .{
                 N,
                 T,
                 self.shape,
@@ -480,7 +480,7 @@ test "nd3 f32 init" {
         .stride = .{ 1, 4, 16 },
         .allocator = __allocator,
     });
-    std.debug.print("a.order {d}\n", .{a.order});
+    std.debug.print("a.order {any}\n", .{a.order});
     defer a.free();
 
     try std.testing.expectEqual(f32, @TypeOf(a).T);
@@ -495,7 +495,7 @@ test "nd3 f32 init" {
         // .allocator = std.heap.page_allocator,
         .shape = .{ 4, 4, 4 },
     });
-    std.debug.print("b.order {d}\n", .{b.order});
+    std.debug.print("b.order {any}\n", .{b.order});
     try std.testing.expectEqual([_]isize{ 16, 4, 1 }, b.stride);
 
     b.setAt(.{ 0, 1, 1 }, 42);
@@ -503,12 +503,12 @@ test "nd3 f32 init" {
     defer b.free();
 
     var p = try b.toOwnedSlice(.{ .allocator = __allocator });
-    std.debug.print("{d}\n", .{p});
+    std.debug.print("{any}\n", .{p});
     __allocator.free(p);
 
     b.stride = .{ 1, 4, 16 };
     p = try b.toOwnedSlice(.{ .allocator = __allocator });
-    std.debug.print("{d}\n", .{p});
+    std.debug.print("{any}\n", .{p});
     __allocator.free(p);
 }
 
@@ -519,7 +519,7 @@ test "nd3 f32 iter" {
         .allocator = __allocator,
     });
     defer a.free();
-    std.debug.print("stride {d}, order {d}\n", .{ a.stride, a.order });
+    std.debug.print("stride {any}, order {any}\n", .{ a.stride, a.order });
     a.setAt(.{ 0, 1, 1 }, 23);
     a.setAt(.{ 1, 1, 1 }, 42);
 
@@ -527,7 +527,7 @@ test "nd3 f32 iter" {
 
     const p = try a.toOwnedSlice(.{ .allocator = __allocator });
     defer __allocator.free(p);
-    std.debug.print("{d}\n", .{p});
+    std.debug.print("{any}\n", .{p});
     var i = a.values(.{});
     while (true) {
         if (i.next()) |pos| {
@@ -541,7 +541,7 @@ test "1d reshape" {
     defer a.free();
     var b = try a.reshape(4, .{ .shape = .{ 2, 2, 2, 2 } });
     b = try b.transpose(.{ 1, 0, 3, 2 });
-    std.debug.print("{d}", .{b.stride});
+    std.debug.print("{any}", .{b.stride});
     var i = b.values(.{ .order = .Major });
     while (true) {
         if (i.next()) |pos| {
@@ -556,10 +556,10 @@ test "2d trunc" {
     var b = try a.reshape(2, .{ .shape = .{ 4, 4 } });
     b = try b.lo(.{ 1, 2 });
     b = try b.hi(.{ 2, 2 });
-    std.debug.print("{d}", .{b.shape});
+    std.debug.print("{any}", .{b.shape});
     const c = try b.toOwnedSlice(.{ .allocator = __allocator });
     defer __allocator.free(c);
-    std.debug.print("{d}\n", .{c});
+    std.debug.print("{any}\n", .{c});
 }
 
 test "3d -> 2d pick" {
@@ -570,7 +570,7 @@ test "3d -> 2d pick" {
     c.print();
     const d = try c.toOwnedSlice(.{ .allocator = __allocator });
     defer __allocator.free(d);
-    std.debug.print("{d}\n", .{d});
+    std.debug.print("{any}\n", .{d});
 }
 
 test "3d step" {
@@ -589,7 +589,7 @@ test "3d step" {
     c.print();
     const d = try c.toOwnedSlice(.{ .allocator = __allocator });
     defer __allocator.free(d);
-    std.debug.print("{d}\n", .{d});
+    std.debug.print("{any}\n", .{d});
 }
 
 test "3d axis iter" {
@@ -606,5 +606,5 @@ test "3d axis iter" {
     std.debug.print("sum {d}\n", .{c.sum()});
     const d = try c.toOwnedSlice(.{ .allocator = __allocator });
     defer __allocator.free(d);
-    std.debug.print("{d}\n", .{d});
+    std.debug.print("{any}\n", .{d});
 }
