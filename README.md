@@ -6,7 +6,7 @@ Various, still somewhat unstructured, raw-around-the-edges utilities / open
 learning with [Zig](https://ziglang.org), at some point hopefully culminating
 into a useful toolkit.
 
-**All code in this repo is compatible with Zig v0.14.0**
+**All code in this repo is compatible with Zig v0.15.1**.
 
 ## Current modules (all WIP)
 
@@ -24,7 +24,7 @@ Tagged versions of this project are available and can be added as dependency to
 your project via `zig fetch`, like so:
 
 ```bash
-zig fetch --save https://github.com/thi-ng/zig-thing/archive/refs/tags/v0.2.1.tar.gz
+zig fetch --save https://github.com/thi-ng/zig-thing/archive/refs/tags/v0.3.0.tar.gz
 ```
 
 The `--save` option adds a new dependency called `thing` to your
